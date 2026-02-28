@@ -7,6 +7,63 @@ import { ResultsPanel } from '@/components/calculator/ResultsPanel'
 import { InputForm } from '@/components/calculator/InputForm'
 import { GapsPanel } from '@/components/calculator/GapsPanel'
 
+const TEST_PROFILES: { label: string; profile: OrgProfile; inputs: { factor_id: string; source_type: string; quantity: number; unit: string; site?: string }[] }[] = [
+  {
+    label: 'Acme Manufacturing Ltd — Multi-site',
+    profile: { name: 'Acme Manufacturing Ltd', sector: 'Manufacturing', employees: 320, revenue_m: 28.5, floor_area_m2: 12000, companies_house: '09876543', sites: ['Sheffield Works', 'Leeds Office', 'Manchester Depot'] },
+    inputs: [
+      { factor_id: 'natural_gas_kwh', source_type: 'natural_gas_kwh', quantity: 180000, unit: 'kWh', site: 'Sheffield Works' },
+      { factor_id: 'natural_gas_kwh', source_type: 'natural_gas_kwh', quantity: 32000,  unit: 'kWh', site: 'Leeds Office' },
+      { factor_id: 'electricity_kwh', source_type: 'electricity_kwh', quantity: 420000, unit: 'kWh', site: 'Sheffield Works' },
+      { factor_id: 'electricity_kwh', source_type: 'electricity_kwh', quantity: 85000,  unit: 'kWh', site: 'Leeds Office' },
+      { factor_id: 'electricity_kwh', source_type: 'electricity_kwh', quantity: 44000,  unit: 'kWh', site: 'Manchester Depot' },
+      { factor_id: 'diesel_litres',   source_type: 'diesel_litres',   quantity: 12500,  unit: 'litres', site: 'Manchester Depot' },
+      { factor_id: 'flight_short_haul', source_type: 'flight_short_haul', quantity: 8400, unit: 'km' },
+    ],
+  },
+  {
+    label: 'Greenleaf Consulting — Professional Services',
+    profile: { name: 'Greenleaf Consulting', sector: 'Professional Services', employees: 45, revenue_m: 4.2, floor_area_m2: 850, sites: ['London HQ'] },
+    inputs: [
+      { factor_id: 'natural_gas_kwh', source_type: 'natural_gas_kwh', quantity: 18000,  unit: 'kWh', site: 'London HQ' },
+      { factor_id: 'electricity_kwh', source_type: 'electricity_kwh', quantity: 52000,  unit: 'kWh', site: 'London HQ' },
+      { factor_id: 'flight_long_haul', source_type: 'flight_long_haul', quantity: 24000, unit: 'km' },
+      { factor_id: 'flight_short_haul', source_type: 'flight_short_haul', quantity: 12000, unit: 'km' },
+      { factor_id: 'rail_national',   source_type: 'rail_national',   quantity: 18500,  unit: 'km' },
+      { factor_id: 'grey_fleet_petrol', source_type: 'grey_fleet_petrol', quantity: 22000, unit: 'km' },
+    ],
+  },
+  {
+    label: 'Swift Logistics — Transport & Fleet',
+    profile: { name: 'Swift Logistics Ltd', sector: 'Logistics & Transport', employees: 180, revenue_m: 15.8, floor_area_m2: 6500, sites: ['Birmingham Hub', 'Bristol Depot'] },
+    inputs: [
+      { factor_id: 'diesel_litres',   source_type: 'diesel_litres',   quantity: 85000,  unit: 'litres', site: 'Birmingham Hub' },
+      { factor_id: 'diesel_litres',   source_type: 'diesel_litres',   quantity: 42000,  unit: 'litres', site: 'Bristol Depot' },
+      { factor_id: 'natural_gas_kwh', source_type: 'natural_gas_kwh', quantity: 28000,  unit: 'kWh', site: 'Birmingham Hub' },
+      { factor_id: 'electricity_kwh', source_type: 'electricity_kwh', quantity: 68000,  unit: 'kWh', site: 'Birmingham Hub' },
+      { factor_id: 'electricity_kwh', source_type: 'electricity_kwh', quantity: 31000,  unit: 'kWh', site: 'Bristol Depot' },
+    ],
+  },
+  {
+    label: 'Riverstone Retail — Single Site',
+    profile: { name: 'Riverstone Retail Ltd', sector: 'Retail', employees: 62, revenue_m: 7.1, floor_area_m2: 2200, sites: ['Bristol Store'] },
+    inputs: [
+      { factor_id: 'natural_gas_kwh', source_type: 'natural_gas_kwh', quantity: 41000,  unit: 'kWh', site: 'Bristol Store' },
+      { factor_id: 'electricity_kwh', source_type: 'electricity_kwh', quantity: 148000, unit: 'kWh', site: 'Bristol Store' },
+      { factor_id: 'van_diesel_km',   source_type: 'van_diesel_km',   quantity: 28000,  unit: 'km',  site: 'Bristol Store' },
+    ],
+  },
+  {
+    label: 'Northfield Academy — Education',
+    profile: { name: 'Northfield Academy', sector: 'Education', employees: 110, revenue_m: 6.8, floor_area_m2: 8500, sites: ['Main Campus'] },
+    inputs: [
+      { factor_id: 'natural_gas_kwh', source_type: 'natural_gas_kwh', quantity: 295000, unit: 'kWh', site: 'Main Campus' },
+      { factor_id: 'electricity_kwh', source_type: 'electricity_kwh', quantity: 210000, unit: 'kWh', site: 'Main Campus' },
+      { factor_id: 'petrol_litres',   source_type: 'petrol_litres',   quantity: 3200,   unit: 'litres' },
+    ],
+  },
+]
+
 export default function DashboardPage() {
   const router = useRouter()
   const [result, setResult] = useState<CalculationResult | null>(null)
@@ -28,6 +85,22 @@ export default function DashboardPage() {
       localStorage.removeItem('reuse_template')
     }
   }, [])
+
+  function applyTestProfile(idx: string) {
+    if (!idx) return
+    const tp = TEST_PROFILES[parseInt(idx)]
+    if (!tp) return
+    // Save profile to localStorage (same as onboarding)
+    localStorage.setItem('org_profile', JSON.stringify(tp.profile))
+    setProfile(tp.profile)
+    // Set reuse template with the test inputs
+    const template = {
+      organisation_name: tp.profile.name,
+      inputs: tp.inputs.map(inp => ({ ...inp, estimated: false })),
+    }
+    setReuseTemplate({ ...template })
+    setResult(null)
+  }
 
   async function handleCalculate(data: {
     organisation_name: string
@@ -92,6 +165,24 @@ export default function DashboardPage() {
             style={{ ...mono, fontSize: '0.72rem', color: 'var(--text-3)', background: 'none', border: '1px solid var(--border)', padding: '0.3rem 0.75rem', borderRadius: 'var(--radius-xs)', cursor: 'pointer' }}>
             {profile ? '⚙ Profile' : '+ Setup'}
           </button>
+
+          {/* Test profiles dropdown */}
+          <div style={{ position: 'relative' as const }}>
+            <select
+              defaultValue=""
+              onChange={e => { applyTestProfile(e.target.value); e.target.value = '' }}
+              style={{
+                ...mono, fontSize: '0.72rem', color: 'var(--green)',
+                background: 'var(--green-light)', border: '1px solid var(--border-strong)',
+                padding: '0.3rem 0.75rem', borderRadius: 'var(--radius-xs)', cursor: 'pointer',
+                outline: 'none', maxWidth: 180,
+              }}>
+              <option value="" disabled>⚗ Test profile…</option>
+              {TEST_PROFILES.map((tp, i) => (
+                <option key={i} value={String(i)}>{tp.label}</option>
+              ))}
+            </select>
+          </div>
         </div>
       </nav>
 
