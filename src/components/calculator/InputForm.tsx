@@ -65,12 +65,9 @@ export function InputForm({ onCalculate, loading, profile, reuseTemplate }: Prop
   const [orgName, setOrgName] = useState(reuseTemplate?.organisation_name || profile?.name || '')
   const [periodStart, setPeriodStart] = useState('')
   const [periodEnd, setPeriodEnd] = useState('')
-  const [rows, setRows] = useState<Row[]>([emptyRow(0)])
-
-  // Populate rows and org name when reuseTemplate arrives (loaded async from localStorage)
-  useEffect(() => {
+  const [rows, setRows] = useState<Row[]>(() => {
     if (reuseTemplate?.inputs?.length) {
-      setRows(reuseTemplate.inputs.map((inp, i) => ({
+      return reuseTemplate.inputs.map((inp, i) => ({
         _key: `row_reuse_${i}`,
         id: `input_${i}`,
         source_type: inp.source_type,
@@ -81,13 +78,13 @@ export function InputForm({ onCalculate, loading, profile, reuseTemplate }: Prop
         estimated: inp.estimated ?? false,
         period_start: '',
         period_end: '',
-      })))
-      if (reuseTemplate.organisation_name) setOrgName(reuseTemplate.organisation_name)
+      }))
     }
-  }, [reuseTemplate])
+    return [emptyRow(0)]
+  })
 
   useEffect(() => {
-    if (!reuseTemplate?.organisation_name && profile?.name) setOrgName(profile.name)
+    if (profile?.name && !reuseTemplate?.organisation_name) setOrgName(profile.name)
   }, [profile?.name])
 
   const sites = profile?.sites.filter(Boolean) || []

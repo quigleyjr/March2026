@@ -70,6 +70,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [profile, setProfile] = useState<OrgProfile | null>(null)
+  const [formKey, setFormKey] = useState(0)
   const [reuseTemplate, setReuseTemplate] = useState<{
     organisation_name: string
     inputs: { factor_id: string; source_type: string; quantity: number; unit: string; site?: string; estimated?: boolean }[]
@@ -82,6 +83,7 @@ export default function DashboardPage() {
     const template = localStorage.getItem('reuse_template')
     if (template) {
       setReuseTemplate(JSON.parse(template))
+      setFormKey(k => k + 1)
       localStorage.removeItem('reuse_template')
     }
   }, [])
@@ -99,6 +101,7 @@ export default function DashboardPage() {
       inputs: tp.inputs.map(inp => ({ ...inp, estimated: false })),
     }
     setReuseTemplate({ ...template })
+    setFormKey(k => k + 1)
     setResult(null)
   }
 
@@ -245,7 +248,7 @@ export default function DashboardPage() {
 
         <div style={{ display: 'grid', gap: '1.5rem', gridTemplateColumns: result ? '420px 1fr' : '520px' }}>
           <div>
-            <InputForm onCalculate={handleCalculate} loading={loading} profile={profile} reuseTemplate={reuseTemplate} />
+            <InputForm key={formKey} onCalculate={handleCalculate} loading={loading} profile={profile} reuseTemplate={reuseTemplate} />
             {error && (
               <div style={{ marginTop: '0.75rem', padding: '0.75rem 1rem', background: 'var(--red-light)', color: 'var(--red)', border: '1px solid rgba(184,50,50,0.2)', borderRadius: 'var(--radius-sm)', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.75rem' }}>
                 {error}
