@@ -16,11 +16,18 @@ const ActivityInputSchema = z.object({
   estimated: z.boolean().optional(),
 })
 
+const IntensitySchema = z.object({
+  employees: z.number().optional(),
+  revenue_m: z.number().optional(),
+  floor_area_m2: z.number().optional(),
+}).optional()
+
 const RequestSchema = z.object({
   organisation_name: z.string().min(1),
   reporting_period_start: z.string(),
   reporting_period_end: z.string(),
   inputs: z.array(ActivityInputSchema).min(1),
+  intensity: IntensitySchema,
   save: z.boolean().optional().default(true),
 })
 
@@ -28,9 +35,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
     const parsed = RequestSchema.safeParse(body)
-    if (!parsed.success) {
-      return NextResponse.json({ error: 'Invalid request', details: parsed.error.flatten() }, { status: 400 })
-    }
+    if (!parsed.success) return NextResponse.json({ error: 'Invalid request', details: parsed.error.flatten() }, { status: 400 })
 
     const { save, ...calculationRequest } = parsed.data
     const result = calculate(calculationRequest)
@@ -89,9 +94,9 @@ export async function POST(req: NextRequest) {
 export async function GET() {
   const { data, error } = await supabase
     .from('calculations')
-    .select('id, organisation_name, reporting_period_start, reporting_period_end, total_t_co2e, scope_1_t_co2e, scope_2_t_co2e, scope_3_t_co2e, data_quality_score, calculated_at')
+    .select('id, organisation_name, reporting_period_start, reporting_period_end, total_t_co2e, scope_1_t_co2e, scope_2_t_co2e, scope_3_t_co2e, data_quality_score, calculated_at, factor_version')
     .order('calculated_at', { ascending: false })
-    .limit(20)
+    .limit(50)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ calculations: data })

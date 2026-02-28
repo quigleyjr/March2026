@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import type { ActivityInput } from '@/types'
+import type { ActivityInput, OrgProfile } from '@/types'
 
 interface Props {
   onCalculate: (data: {
@@ -11,6 +11,7 @@ interface Props {
     inputs: ActivityInput[]
   }) => void
   loading: boolean
+  profile?: OrgProfile | null
 }
 
 const SOURCE_OPTIONS = [
@@ -45,50 +46,18 @@ function emptyRow(n: number): Row {
   return { _key: `row_${Date.now()}_${n}`, id: `input_${n}`, source_type: opt.factor_id, factor_id: opt.factor_id, quantity: 0, unit: opt.unit, period_start: '', period_end: '', estimated: false }
 }
 
-const card = {
-  background: 'var(--surface)',
-  border: '1px solid var(--border)',
-  borderRadius: 'var(--radius)',
-  padding: '1.25rem',
-  boxShadow: 'var(--shadow-sm)',
-  marginBottom: '0.75rem',
-}
+const card = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '1.25rem', boxShadow: 'var(--shadow-sm)', marginBottom: '0.75rem' }
+const fieldLabel = { display: 'block' as const, fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-2)', marginBottom: '0.35rem', letterSpacing: '0.01em' }
+const inputBase = { width: '100%', padding: '0.5rem 0.75rem', fontSize: '0.875rem', border: '1px solid var(--border)', borderRadius: 'var(--radius-xs)', background: 'var(--bg)', color: 'var(--text)', outline: 'none' }
+const sectionHead = { fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.06em', textTransform: 'uppercase' as const, marginBottom: '0.875rem' }
 
-const fieldLabel = {
-  display: 'block' as const,
-  fontSize: '0.72rem',
-  fontWeight: 600,
-  color: 'var(--text-2)',
-  marginBottom: '0.35rem',
-  letterSpacing: '0.01em',
-}
-
-const inputBase = {
-  width: '100%',
-  padding: '0.5rem 0.75rem',
-  fontSize: '0.875rem',
-  border: '1px solid var(--border)',
-  borderRadius: 'var(--radius-xs)',
-  background: 'var(--bg)',
-  color: 'var(--text)',
-  outline: 'none',
-  transition: 'border-color 0.15s',
-}
-
-const sectionHead = {
-  fontSize: '0.72rem',
-  fontWeight: 700,
-  color: 'var(--text-3)',
-  letterSpacing: '0.06em',
-  textTransform: 'uppercase' as const,
-  marginBottom: '0.875rem',
-}
-
-export function InputForm({ onCalculate, loading }: Props) {
-  const [orgName, setOrgName] = useState('')
+export function InputForm({ onCalculate, loading, profile }: Props) {
+  const [orgName, setOrgName] = useState(profile?.name || '')
   const [periodStart, setPeriodStart] = useState('')
   const [periodEnd, setPeriodEnd] = useState('')
   const [rows, setRows] = useState<Row[]>([emptyRow(0)])
+
+  const sites = profile?.sites.filter(Boolean) || []
 
   function addRow() { setRows(r => [...r, emptyRow(r.length)]) }
   function removeRow(key: string) { setRows(r => r.filter(row => row._key !== key)) }
@@ -126,126 +95,85 @@ export function InputForm({ onCalculate, loading }: Props) {
 
   return (
     <form onSubmit={handleSubmit}>
-      {/* Organisation card */}
       <div style={card}>
         <p style={sectionHead}>Organisation</p>
         <div style={{ marginBottom: '0.75rem' }}>
           <label style={fieldLabel}>Company name</label>
-          <input type="text" required value={orgName}
-            onChange={e => setOrgName(e.target.value)}
-            placeholder="e.g. Acme Ltd"
-            style={inputBase} />
+          <input type="text" required value={orgName} onChange={e => setOrgName(e.target.value)} placeholder="e.g. Acme Ltd" style={inputBase} />
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
           <div>
             <label style={fieldLabel}>Period start</label>
-            <input type="date" required value={periodStart}
-              onChange={e => setPeriodStart(e.target.value)}
-              style={inputBase} />
+            <input type="date" required value={periodStart} onChange={e => setPeriodStart(e.target.value)} style={inputBase} />
           </div>
           <div>
             <label style={fieldLabel}>Period end</label>
-            <input type="date" required value={periodEnd}
-              onChange={e => setPeriodEnd(e.target.value)}
-              style={inputBase} />
+            <input type="date" required value={periodEnd} onChange={e => setPeriodEnd(e.target.value)} style={inputBase} />
           </div>
         </div>
       </div>
 
-      {/* Activity data card */}
       <div style={card}>
         <p style={sectionHead}>Activity Data</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.75rem' }}>
-          {rows.map((row, idx) => {
+          {rows.map((row) => {
             const opt = SOURCE_OPTIONS.find(o => o.factor_id === row.factor_id)
             const scopeStyle = SCOPE_STYLE[opt?.scope ?? 1]
             return (
-              <div key={row._key} style={{
-                background: 'var(--bg)',
-                border: '1px solid var(--border)',
-                borderRadius: 'var(--radius-sm)',
-                padding: '0.75rem',
-                display: 'grid',
-                gridTemplateColumns: '1fr 110px auto',
-                gap: '0.5rem',
-                alignItems: 'end',
-              }}>
-                <div>
-                  <label style={{ ...fieldLabel, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <span>Source</span>
-                    <span style={{
-                      fontSize: '0.6rem', fontWeight: 700, padding: '0.15rem 0.5rem',
-                      borderRadius: 20, background: scopeStyle.bg, color: scopeStyle.color,
-                      letterSpacing: '0.04em',
-                    }}>
-                      S{opt?.scope}
-                    </span>
-                  </label>
-                  <select value={row.factor_id}
-                    onChange={e => updateRow(row._key, 'factor_id', e.target.value)}
-                    style={{ ...inputBase, background: 'var(--surface)' }}>
-                    {Object.entries(grouped).map(([group, opts]) => (
-                      <optgroup key={group} label={group}>
-                        {opts.map(o => <option key={o.factor_id} value={o.factor_id}>{o.label}</option>)}
-                      </optgroup>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label style={fieldLabel}>{row.unit}</label>
-                  <input type="number" min="0" step="any" required
-                    value={row.quantity || ''}
-                    onChange={e => updateRow(row._key, 'quantity', parseFloat(e.target.value) || 0)}
-                    placeholder="0"
-                    style={{ ...inputBase, background: 'var(--surface)' }} />
-                </div>
-                <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.5rem', paddingBottom: '2px' }}>
-                  <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.2rem', cursor: 'pointer' }}>
-                    <span style={{ fontSize: '0.62rem', color: 'var(--text-3)', fontWeight: 600 }}>Est</span>
-                    <input type="checkbox" checked={row.estimated ?? false}
-                      onChange={e => updateRow(row._key, 'estimated', e.target.checked)}
-                      style={{ width: 15, height: 15, cursor: 'pointer' }} />
-                  </label>
-                  <button type="button" onClick={() => removeRow(row._key)}
-                    disabled={rows.length === 1}
-                    style={{
-                      width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      background: 'none', border: '1px solid var(--border)', borderRadius: 6,
-                      cursor: rows.length === 1 ? 'not-allowed' : 'pointer',
-                      color: rows.length === 1 ? 'var(--border)' : 'var(--text-3)',
-                      fontSize: '0.8rem', transition: 'all 0.15s',
-                    }}>
-                    ✕
-                  </button>
+              <div key={row._key} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '0.75rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: sites.length > 0 ? '1.5fr 1fr 100px auto' : '2fr 110px auto', gap: '0.5rem', alignItems: 'end' }}>
+                  <div>
+                    <label style={{ ...fieldLabel, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <span>Source</span>
+                      <span style={{ fontSize: '0.6rem', fontWeight: 700, padding: '0.15rem 0.5rem', borderRadius: 20, background: scopeStyle.bg, color: scopeStyle.color }}>S{opt?.scope}</span>
+                    </label>
+                    <select value={row.factor_id} onChange={e => updateRow(row._key, 'factor_id', e.target.value)} style={{ ...inputBase, background: 'var(--surface)' }}>
+                      {Object.entries(grouped).map(([group, opts]) => (
+                        <optgroup key={group} label={group}>
+                          {opts.map(o => <option key={o.factor_id} value={o.factor_id}>{o.label}</option>)}
+                        </optgroup>
+                      ))}
+                    </select>
+                  </div>
+
+                  {sites.length > 0 && (
+                    <div>
+                      <label style={fieldLabel}>Site</label>
+                      <select value={row.site || ''} onChange={e => updateRow(row._key, 'site', e.target.value)} style={{ ...inputBase, background: 'var(--surface)' }}>
+                        <option value="">— All sites</option>
+                        {sites.map(s => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                    </div>
+                  )}
+
+                  <div>
+                    <label style={fieldLabel}>{row.unit}</label>
+                    <input type="number" min="0" step="any" required value={row.quantity || ''}
+                      onChange={e => updateRow(row._key, 'quantity', parseFloat(e.target.value) || 0)}
+                      placeholder="0" style={{ ...inputBase, background: 'var(--surface)' }} />
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.4rem', paddingBottom: '2px' }}>
+                    <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.2rem', cursor: 'pointer' }}>
+                      <span style={{ fontSize: '0.62rem', color: 'var(--text-3)', fontWeight: 600 }}>Est</span>
+                      <input type="checkbox" checked={row.estimated ?? false} onChange={e => updateRow(row._key, 'estimated', e.target.checked)} style={{ width: 15, height: 15 }} />
+                    </label>
+                    <button type="button" onClick={() => removeRow(row._key)} disabled={rows.length === 1}
+                      style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: '1px solid var(--border)', borderRadius: 6, cursor: rows.length === 1 ? 'not-allowed' : 'pointer', color: rows.length === 1 ? 'var(--border)' : 'var(--text-3)', fontSize: '0.8rem' }}>
+                      ✕
+                    </button>
+                  </div>
                 </div>
               </div>
             )
           })}
         </div>
-
-        <button type="button" onClick={addRow} style={{
-          display: 'flex', alignItems: 'center', gap: '0.4rem',
-          fontSize: '0.8rem', fontWeight: 600, color: 'var(--green)',
-          background: 'var(--green-light)', border: '1px dashed var(--border-strong)',
-          padding: '0.45rem 0.875rem', borderRadius: 'var(--radius-xs)',
-          cursor: 'pointer', width: '100%', justifyContent: 'center',
-        }}>
+        <button type="button" onClick={addRow} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', fontWeight: 600, color: 'var(--green)', background: 'var(--green-light)', border: '1px dashed var(--border-strong)', padding: '0.45rem 0.875rem', borderRadius: 'var(--radius-xs)', cursor: 'pointer', width: '100%', justifyContent: 'center' }}>
           + Add emission source
         </button>
       </div>
 
-      {/* Submit */}
-      <button type="submit" disabled={!isValid || loading} style={{
-        width: '100%', padding: '0.75rem',
-        fontSize: '0.875rem', fontWeight: 700,
-        background: isValid && !loading ? 'var(--green)' : 'var(--border-strong)',
-        color: isValid && !loading ? 'white' : 'var(--text-3)',
-        border: 'none', borderRadius: 'var(--radius-sm)',
-        cursor: isValid && !loading ? 'pointer' : 'not-allowed',
-        boxShadow: isValid && !loading ? '0 2px 8px rgba(26,122,60,0.25)' : 'none',
-        transition: 'all 0.15s',
-        letterSpacing: '0.01em',
-      }}>
+      <button type="submit" disabled={!isValid || loading} style={{ width: '100%', padding: '0.75rem', fontSize: '0.875rem', fontWeight: 700, background: isValid && !loading ? 'var(--green)' : 'var(--border-strong)', color: isValid && !loading ? 'white' : 'var(--text-3)', border: 'none', borderRadius: 'var(--radius-sm)', cursor: isValid && !loading ? 'pointer' : 'not-allowed', boxShadow: isValid && !loading ? '0 2px 8px rgba(26,122,60,0.25)' : 'none', transition: 'all 0.15s' }}>
         {loading ? 'Calculating…' : 'Calculate emissions →'}
       </button>
     </form>

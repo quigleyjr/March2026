@@ -5,6 +5,7 @@ export type EmissionCategory =
   | 'mobile_combustion'
   | 'purchased_electricity'
   | 'fuel_energy_related'
+  | 'business_travel'
 
 export interface EmissionFactor {
   id: string
@@ -73,6 +74,24 @@ export interface GapItem {
   recommendation: string
 }
 
+export interface SiteBreakdown {
+  site: string
+  t_co2e: number
+  scope_1: number
+  scope_2: number
+  scope_3: number
+  line_count: number
+}
+
+export interface IntensityMetrics {
+  per_employee?: number       // tCO2e per employee
+  per_revenue_m?: number      // tCO2e per £m revenue
+  per_floor_area?: number     // tCO2e per m² floor area
+  employees?: number
+  revenue_m?: number
+  floor_area_m2?: number
+}
+
 export interface CalculationResult {
   id: string
   organisation_name: string
@@ -89,10 +108,23 @@ export interface CalculationResult {
     data_quality_score: number
     estimated_lines: number
     uncertainty_pct: number
+    sites: SiteBreakdown[]
   }
+  intensity?: IntensityMetrics
   gaps: GapItem[]
   metadata: {
     ghg_protocol_consolidation: string
     scope_2_method: string
   }
+}
+
+// For onboarding / org profile
+export interface OrgProfile {
+  name: string
+  companies_house?: string
+  sector?: string
+  employees?: number
+  revenue_m?: number
+  floor_area_m2?: number
+  sites: string[]
 }
