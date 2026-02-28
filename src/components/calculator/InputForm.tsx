@@ -3,6 +3,15 @@
 import { useState, useEffect } from 'react'
 import type { ActivityInput, OrgProfile } from '@/types'
 
+interface ReuseInput {
+  factor_id: string
+  source_type: string
+  quantity: number
+  unit: string
+  site?: string
+  estimated?: boolean
+}
+
 interface Props {
   onCalculate: (data: {
     organisation_name: string
@@ -12,6 +21,7 @@ interface Props {
   }) => void
   loading: boolean
   profile?: OrgProfile | null
+  reuseTemplate?: { organisation_name: string; inputs: ReuseInput[] } | null
 }
 
 const SOURCE_OPTIONS = [
@@ -51,15 +61,32 @@ const fieldLabel = { display: 'block' as const, fontSize: '0.72rem', fontWeight:
 const inputBase = { width: '100%', padding: '0.5rem 0.75rem', fontSize: '0.875rem', border: '1px solid var(--border)', borderRadius: 'var(--radius-xs)', background: 'var(--bg)', color: 'var(--text)', outline: 'none' }
 const sectionHead = { fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.06em', textTransform: 'uppercase' as const, marginBottom: '0.875rem' }
 
-export function InputForm({ onCalculate, loading, profile }: Props) {
-  const [orgName, setOrgName] = useState(profile?.name || '')
-
-  useEffect(() => {
-    if (profile?.name) setOrgName(profile.name)
-  }, [profile?.name])
+export function InputForm({ onCalculate, loading, profile, reuseTemplate }: Props) {
+  const [orgName, setOrgName] = useState(reuseTemplate?.organisation_name || profile?.name || '')
   const [periodStart, setPeriodStart] = useState('')
   const [periodEnd, setPeriodEnd] = useState('')
-  const [rows, setRows] = useState<Row[]>([emptyRow(0)])
+  const [rows, setRows] = useState<Row[]>(() => {
+    if (reuseTemplate?.inputs?.length) {
+      return reuseTemplate.inputs.map((inp, i) => ({
+        _key: `row_reuse_${i}`,
+        id: `input_${i}`,
+        source_type: inp.source_type,
+        factor_id: inp.factor_id,
+        quantity: inp.quantity,
+        unit: inp.unit,
+        site: inp.site,
+        estimated: inp.estimated ?? false,
+        period_start: '',
+        period_end: '',
+      }))
+    }
+    return [emptyRow(0)]
+  })
+
+  useEffect(() => {
+    if (reuseTemplate?.organisation_name) setOrgName(reuseTemplate.organisation_name)
+    else if (profile?.name) setOrgName(profile.name)
+  }, [profile?.name, reuseTemplate?.organisation_name])
 
   const sites = profile?.sites.filter(Boolean) || []
 

@@ -13,10 +13,20 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [profile, setProfile] = useState<OrgProfile | null>(null)
+  const [reuseTemplate, setReuseTemplate] = useState<{
+    organisation_name: string
+    inputs: { factor_id: string; source_type: string; quantity: number; unit: string; site?: string; estimated?: boolean }[]
+  } | null>(null)
 
   useEffect(() => {
     const saved = localStorage.getItem('org_profile')
     if (saved) setProfile(JSON.parse(saved))
+
+    const template = localStorage.getItem('reuse_template')
+    if (template) {
+      setReuseTemplate(JSON.parse(template))
+      localStorage.removeItem('reuse_template')
+    }
   }, [])
 
   async function handleCalculate(data: {
@@ -87,6 +97,20 @@ export default function DashboardPage() {
 
       <main style={{ maxWidth: 1200, margin: '0 auto', padding: '2rem 1.5rem' }}>
 
+        {/* Reuse template banner */}
+        {reuseTemplate && (
+          <div style={{
+            marginBottom: '1.25rem', padding: '0.875rem 1.25rem',
+            background: 'var(--blue-light)', border: '1px solid rgba(26,77,140,0.2)',
+            borderRadius: 'var(--radius-sm)',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          }}>
+            <p style={{ fontSize: '0.875rem', color: 'var(--blue)', fontWeight: 500 }}>
+              ↺ {reuseTemplate.inputs.length} emission source{reuseTemplate.inputs.length !== 1 ? 's' : ''} loaded from history — update the dates and calculate
+            </p>
+          </div>
+        )}
+
         {/* Profile banner if no profile */}
         {!profile && (
           <div style={{
@@ -130,7 +154,7 @@ export default function DashboardPage() {
 
         <div style={{ display: 'grid', gap: '1.5rem', gridTemplateColumns: result ? '420px 1fr' : '520px' }}>
           <div>
-            <InputForm onCalculate={handleCalculate} loading={loading} profile={profile} />
+            <InputForm onCalculate={handleCalculate} loading={loading} profile={profile} reuseTemplate={reuseTemplate} />
             {error && (
               <div style={{ marginTop: '0.75rem', padding: '0.75rem 1rem', background: 'var(--red-light)', color: 'var(--red)', border: '1px solid rgba(184,50,50,0.2)', borderRadius: 'var(--radius-sm)', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.75rem' }}>
                 {error}

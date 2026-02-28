@@ -22,6 +22,7 @@ export default function HistoryPage() {
   const [calcs, setCalcs] = useState<CalcSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [reusing, setReusing] = useState<string | null>(null)
 
   useEffect(() => {
     fetch('/api/calculate')
@@ -30,16 +31,47 @@ export default function HistoryPage() {
       .catch(() => { setError('Failed to load calculations'); setLoading(false) })
   }, [])
 
+  async function reuseCalculation(id: string) {
+    setReusing(id)
+    try {
+      const res = await fetch(`/api/calculation/${id}`)
+      const { result } = await res.json()
+      if (!result) throw new Error('Not found')
+
+      // Extract user input lines only (strip auto-WTT)
+      const userLines = result.lines.filter((l: { input: { notes?: string } }) =>
+        !l.input.notes?.startsWith('Auto WTT')
+      )
+
+      // Build reusable input template — keep source/quantity/site/unit, clear dates
+      const template = {
+        organisation_name: result.organisation_name,
+        inputs: userLines.map((l: { input: { factor_id: string; quantity: number; unit: string; site?: string; estimated?: boolean; source_type: string } }) => ({
+          factor_id: l.input.factor_id,
+          source_type: l.input.source_type,
+          quantity: l.input.quantity,
+          unit: l.input.unit,
+          site: l.input.site,
+          estimated: l.input.estimated ?? false,
+        })),
+      }
+
+      localStorage.setItem('reuse_template', JSON.stringify(template))
+      router.push('/dashboard')
+    } catch {
+      setReusing(null)
+      alert('Failed to load calculation')
+    }
+  }
+
   const nav = {
     background: 'var(--white)', borderBottom: '1px solid var(--border)',
     padding: '0 2rem', height: 56,
     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
     boxShadow: 'var(--shadow-sm)', position: 'sticky' as const, top: 0, zIndex: 50,
   }
-
   const mono = { fontFamily: 'JetBrains Mono, monospace' }
   const label = { ...mono, fontSize: '0.65rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: 'var(--text-3)' }
-
   const qualityColour = (score: number) => score >= 80 ? 'var(--green)' : score >= 50 ? 'var(--amber)' : 'var(--red)'
 
   return (
@@ -71,21 +103,12 @@ export default function HistoryPage() {
             Calculation History
           </h1>
           <p style={{ color: 'var(--text-3)', fontSize: '0.875rem', marginTop: '0.3rem' }}>
-            {calcs.length} calculation{calcs.length !== 1 ? 's' : ''} saved · All calculations include full audit trails
+            {calcs.length} calculation{calcs.length !== 1 ? 's' : ''} · Click any entry to reuse its emission sources
           </p>
         </div>
 
-        {loading && (
-          <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-3)', ...mono, fontSize: '0.8rem' }}>
-            Loading…
-          </div>
-        )}
-
-        {error && (
-          <div style={{ padding: '1rem', background: 'var(--red-light)', color: 'var(--red)', borderRadius: 'var(--radius-sm)', ...mono, fontSize: '0.8rem' }}>
-            {error}
-          </div>
-        )}
+        {loading && <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-3)', ...mono, fontSize: '0.8rem' }}>Loading…</div>}
+        {error && <div style={{ padding: '1rem', background: 'var(--red-light)', color: 'var(--red)', borderRadius: 'var(--radius-sm)', ...mono, fontSize: '0.8rem' }}>{error}</div>}
 
         {!loading && calcs.length === 0 && (
           <div style={{ textAlign: 'center', padding: '4rem 2rem', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', boxShadow: 'var(--shadow-sm)' }}>
@@ -106,14 +129,36 @@ export default function HistoryPage() {
               const s1pct = total > 0 ? (calc.scope_1_t_co2e / total * 100) : 0
               const s2pct = total > 0 ? (calc.scope_2_t_co2e / total * 100) : 0
               const s3pct = total > 0 ? (calc.scope_3_t_co2e / total * 100) : 0
+              const isLoading = reusing === calc.id
+
               return (
-                <div key={calc.id} style={{
-                  background: 'var(--surface)', border: '1px solid var(--border)',
-                  borderRadius: 'var(--radius)', padding: '1.25rem 1.5rem',
-                  boxShadow: 'var(--shadow-sm)',
-                  display: 'grid', gridTemplateColumns: '1fr auto',
-                  gap: '1rem', alignItems: 'center',
-                }}>
+                <div key={calc.id}
+                  onClick={() => !reusing && reuseCalculation(calc.id)}
+                  style={{
+                    background: 'var(--surface)', border: '1px solid var(--border)',
+                    borderRadius: 'var(--radius)', padding: '1.25rem 1.5rem',
+                    boxShadow: 'var(--shadow-sm)',
+                    display: 'grid', gridTemplateColumns: '1fr auto',
+                    gap: '1rem', alignItems: 'center',
+                    cursor: reusing ? 'wait' : 'pointer',
+                    transition: 'border-color 0.15s, box-shadow 0.15s, transform 0.1s',
+                    opacity: reusing && !isLoading ? 0.5 : 1,
+                  }}
+                  onMouseEnter={e => {
+                    if (!reusing) {
+                      const el = e.currentTarget
+                      el.style.borderColor = 'var(--border-strong)'
+                      el.style.boxShadow = 'var(--shadow)'
+                      el.style.transform = 'translateY(-1px)'
+                    }
+                  }}
+                  onMouseLeave={e => {
+                    const el = e.currentTarget
+                    el.style.borderColor = 'var(--border)'
+                    el.style.boxShadow = 'var(--shadow-sm)'
+                    el.style.transform = 'translateY(0)'
+                  }}
+                >
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
                       <span style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: '1rem', color: 'var(--text)' }}>
@@ -126,20 +171,20 @@ export default function HistoryPage() {
 
                     {/* Scope bar */}
                     <div style={{ display: 'flex', height: 6, borderRadius: 3, overflow: 'hidden', background: 'var(--border)', marginBottom: '0.5rem', maxWidth: 400 }}>
-                      <div style={{ width: `${s1pct}%`, background: 'var(--green)', transition: 'width 0.3s' }} />
-                      <div style={{ width: `${s2pct}%`, background: 'var(--blue)', transition: 'width 0.3s' }} />
-                      <div style={{ width: `${s3pct}%`, background: 'var(--amber)', transition: 'width 0.3s' }} />
+                      <div style={{ width: `${s1pct}%`, background: '#1a7a3c', transition: 'width 0.3s' }} />
+                      <div style={{ width: `${s2pct}%`, background: '#1a4d8c', transition: 'width 0.3s' }} />
+                      <div style={{ width: `${s3pct}%`, background: '#b87a00', transition: 'width 0.3s' }} />
                     </div>
 
-                    <div style={{ display: 'flex', gap: '1.25rem' }}>
+                    <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap' }}>
                       {[
-                        { label: 'S1', val: calc.scope_1_t_co2e, colour: 'var(--green)' },
-                        { label: 'S2', val: calc.scope_2_t_co2e, colour: 'var(--blue)' },
-                        { label: 'S3', val: calc.scope_3_t_co2e, colour: 'var(--amber)' },
+                        { l: 'S1', v: calc.scope_1_t_co2e, c: '#1a7a3c' },
+                        { l: 'S2', v: calc.scope_2_t_co2e, c: '#1a4d8c' },
+                        { l: 'S3', v: calc.scope_3_t_co2e, c: '#b87a00' },
                       ].map(s => (
-                        <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                          <div style={{ width: 8, height: 8, borderRadius: 2, background: s.colour }} />
-                          <span style={{ ...mono, fontSize: '0.68rem', color: 'var(--text-3)' }}>{s.label} {s.val.toFixed(2)}</span>
+                        <div key={s.l} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                          <div style={{ width: 8, height: 8, borderRadius: 2, background: s.c }} />
+                          <span style={{ ...mono, fontSize: '0.68rem', color: 'var(--text-3)' }}>{s.l} {s.v.toFixed(2)}</span>
                         </div>
                       ))}
                     </div>
@@ -158,6 +203,16 @@ export default function HistoryPage() {
                       </span>
                       <span style={{ ...mono, fontSize: '0.6rem', color: 'var(--text-3)' }}>
                         {new Date(calc.calculated_at).toLocaleDateString('en-GB')}
+                      </span>
+                    </div>
+                    <div style={{
+                      display: 'flex', alignItems: 'center', gap: '0.35rem',
+                      padding: '0.3rem 0.75rem', borderRadius: 20,
+                      background: isLoading ? 'var(--amber-light)' : 'var(--green-light)',
+                      border: `1px solid ${isLoading ? 'rgba(184,122,0,0.2)' : 'var(--border-strong)'}`,
+                    }}>
+                      <span style={{ fontSize: '0.72rem', fontWeight: 600, color: isLoading ? 'var(--amber)' : 'var(--green)' }}>
+                        {isLoading ? 'Loading…' : '↺ Reuse sources'}
                       </span>
                     </div>
                   </div>
