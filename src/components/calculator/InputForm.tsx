@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { ActivityInput, OrgProfile } from '@/types'
 
 interface Props {
@@ -53,6 +53,10 @@ const sectionHead = { fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-3
 
 export function InputForm({ onCalculate, loading, profile }: Props) {
   const [orgName, setOrgName] = useState(profile?.name || '')
+
+  useEffect(() => {
+    if (profile?.name) setOrgName(profile.name)
+  }, [profile?.name])
   const [periodStart, setPeriodStart] = useState('')
   const [periodEnd, setPeriodEnd] = useState('')
   const [rows, setRows] = useState<Row[]>([emptyRow(0)])
