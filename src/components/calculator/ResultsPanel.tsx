@@ -6,7 +6,8 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 
 
 interface Props { result: CalculationResult }
 
-const SCOPE_COLOURS = ['#2d5a27', '#1e4d8c', '#7a5c00']
+const SCOPE_COLOURS = ['#1a7a3c', '#1a4d8c', '#b87a00']
+const SCOPE_LIGHTS  = ['var(--green-light)', 'var(--blue-light)', 'var(--amber-light)']
 
 export function ResultsPanel({ result }: Props) {
   const { summary, lines, factor_version, organisation_name, reporting_period_start, reporting_period_end, id } = result
@@ -14,13 +15,16 @@ export function ResultsPanel({ result }: Props) {
   const [narrativeLoading, setNarrativeLoading] = useState(false)
   const [narrativeError, setNarrativeError] = useState('')
 
+  const userLines = lines.filter(l => !l.input.notes?.startsWith('Auto WTT'))
+  const wttLines  = lines.filter(l =>  l.input.notes?.startsWith('Auto WTT'))
+
   const chartData = [
     { name: 'Scope 1', value: summary.scope_1_t_co2e, colour: SCOPE_COLOURS[0] },
     { name: 'Scope 2', value: summary.scope_2_t_co2e, colour: SCOPE_COLOURS[1] },
     { name: 'Scope 3', value: summary.scope_3_t_co2e, colour: SCOPE_COLOURS[2] },
-  ].filter((d) => d.value > 0)
+  ].filter(d => d.value > 0)
 
-  const qualityColour = summary.data_quality_score >= 80 ? '#2d5a27' : summary.data_quality_score >= 50 ? '#d4a843' : '#c45c2a'
+  const qualityColour = summary.data_quality_score >= 80 ? 'var(--green)' : summary.data_quality_score >= 50 ? 'var(--amber)' : 'var(--red)'
 
   async function generateNarrative() {
     setNarrativeLoading(true)
@@ -35,142 +39,140 @@ export function ResultsPanel({ result }: Props) {
       if (!res.ok) throw new Error(data.error)
       setNarrative(data.narrative)
     } catch (e) {
-      setNarrativeError(e instanceof Error ? e.message : 'Failed to generate narrative')
+      setNarrativeError(e instanceof Error ? e.message : 'Failed')
     } finally {
       setNarrativeLoading(false)
     }
   }
 
-  function exportPDF() {
-    const wttLines = lines.filter(l => l.input.notes?.startsWith('Auto WTT'))
-    const userLines = lines.filter(l => !l.input.notes?.startsWith('Auto WTT'))
-
+  function exportReport() {
     const html = `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>SECR Report — ${organisation_name}</title>
+<html><head><meta charset="UTF-8"><title>SECR — ${organisation_name}</title>
 <style>
-  body { font-family: Georgia, serif; max-width: 750px; margin: 40px auto; color: #0e1a12; line-height: 1.6; }
-  h1 { font-size: 1.8rem; margin-bottom: 0.25rem; }
-  .meta { font-family: monospace; font-size: 0.8rem; opacity: 0.5; margin-bottom: 2rem; }
-  .total { background: #0e1a12; color: #c8ddb8; padding: 1.5rem; border-radius: 4px; margin-bottom: 1.5rem; }
-  .total h2 { margin: 0 0 0.25rem; font-size: 0.8rem; letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.6; }
-  .total .num { font-size: 3rem; font-weight: bold; line-height: 1; }
-  .scopes { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
-  .scope { border: 1px solid #ccc; padding: 1rem; text-align: center; }
-  .scope h3 { margin: 0 0 0.5rem; font-size: 0.75rem; font-family: monospace; letter-spacing: 0.08em; }
-  .scope .val { font-size: 1.5rem; font-weight: bold; }
-  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-bottom: 1.5rem; }
-  th { text-align: left; padding: 0.5rem; background: #e8ede4; font-family: monospace; font-size: 0.7rem; letter-spacing: 0.06em; text-transform: uppercase; }
-  td { padding: 0.5rem; border-bottom: 1px solid #eee; }
-  .formula { font-family: monospace; font-size: 0.7rem; opacity: 0.5; }
-  .narrative { background: #f8f5ee; border-left: 3px solid #2d5a27; padding: 1rem 1.5rem; margin-bottom: 1.5rem; }
-  .narrative h2 { font-size: 0.85rem; font-family: monospace; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.75rem; color: #2d5a27; }
-  .footer { font-family: monospace; font-size: 0.65rem; opacity: 0.4; border-top: 1px solid #eee; padding-top: 1rem; }
-  @media print { body { margin: 20px; } }
-</style>
-</head>
-<body>
+body{font-family:Georgia,serif;max-width:720px;margin:48px auto;color:#141a12;line-height:1.7;padding:0 24px}
+h1{font-size:2rem;margin-bottom:4px}
+.sub{color:#8a9e86;font-size:0.85rem;margin-bottom:32px;font-family:monospace}
+.total{background:#141a12;color:#e8f5ec;padding:28px 32px;border-radius:12px;margin-bottom:24px}
+.total-label{font-size:0.75rem;letter-spacing:0.1em;text-transform:uppercase;opacity:0.5;margin-bottom:8px;font-family:monospace}
+.total-num{font-size:3.5rem;font-weight:bold;line-height:1}
+.total-unit{font-size:1rem;opacity:0.5;margin-left:8px}
+.scopes{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:24px}
+.scope{border:1px solid #e4eae2;border-radius:10px;padding:16px;text-align:center}
+.scope-label{font-size:0.7rem;font-family:monospace;letter-spacing:0.08em;text-transform:uppercase;color:#8a9e86;margin-bottom:6px}
+.scope-val{font-size:1.5rem;font-weight:bold}
+table{width:100%;border-collapse:collapse;margin-bottom:24px;font-size:0.85rem}
+th{text-align:left;padding:8px 12px;background:#f0f4ee;font-family:monospace;font-size:0.7rem;letter-spacing:0.06em;text-transform:uppercase;color:#4a5e46}
+td{padding:8px 12px;border-bottom:1px solid #f0f4ee}
+.formula{font-family:monospace;font-size:0.68rem;color:#8a9e86}
+.narrative-box{background:#f6f8f5;border-left:3px solid #1a7a3c;padding:16px 20px;margin-bottom:24px;border-radius:0 8px 8px 0}
+.narrative-label{font-family:monospace;font-size:0.7rem;letter-spacing:0.08em;text-transform:uppercase;color:#1a7a3c;margin-bottom:10px}
+.footer{font-family:monospace;font-size:0.65rem;color:#8a9e86;border-top:1px solid #e4eae2;padding-top:16px;margin-top:32px}
+</style></head><body>
 <h1>${organisation_name}</h1>
-<p class="meta">SECR Emissions Report · ${reporting_period_start} to ${reporting_period_end} · Generated ${new Date().toLocaleDateString('en-GB')}</p>
-
+<div class="sub">SECR Emissions Report &nbsp;·&nbsp; ${reporting_period_start} to ${reporting_period_end} &nbsp;·&nbsp; Generated ${new Date().toLocaleDateString('en-GB')}</div>
 <div class="total">
-  <h2>Total Emissions</h2>
-  <div class="num">${summary.total_t_co2e.toLocaleString('en-GB', { maximumFractionDigits: 2 })} tCO₂e</div>
-  <div style="font-family:monospace;font-size:0.75rem;opacity:0.5;margin-top:0.5rem">±${summary.uncertainty_pct}% uncertainty · DESNZ ${factor_version}</div>
+  <div class="total-label">Total Emissions</div>
+  <div class="total-num">${summary.total_t_co2e.toLocaleString('en-GB', { maximumFractionDigits: 2 })}<span class="total-unit">tCO₂e</span></div>
+  <div style="font-family:monospace;font-size:0.72rem;opacity:0.4;margin-top:8px">±${summary.uncertainty_pct}% uncertainty · DESNZ ${factor_version}</div>
 </div>
-
 <div class="scopes">
-  <div class="scope"><h3>Scope 1</h3><div class="val">${summary.scope_1_t_co2e}</div><div style="font-size:0.75rem;opacity:0.5">tCO₂e</div></div>
-  <div class="scope"><h3>Scope 2</h3><div class="val">${summary.scope_2_t_co2e}</div><div style="font-size:0.75rem;opacity:0.5">tCO₂e</div></div>
-  <div class="scope"><h3>Scope 3</h3><div class="val">${summary.scope_3_t_co2e}</div><div style="font-size:0.75rem;opacity:0.5">tCO₂e</div></div>
+  <div class="scope"><div class="scope-label">Scope 1</div><div class="scope-val">${summary.scope_1_t_co2e}</div></div>
+  <div class="scope"><div class="scope-label">Scope 2</div><div class="scope-val">${summary.scope_2_t_co2e}</div></div>
+  <div class="scope"><div class="scope-label">Scope 3</div><div class="scope-val">${summary.scope_3_t_co2e}</div></div>
 </div>
-
-${narrative ? `<div class="narrative"><h2>SECR Narrative</h2><p>${narrative}</p></div>` : ''}
-
-<h2 style="font-family:monospace;font-size:0.8rem;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:1rem">Audit Trail</h2>
-<table>
-<thead><tr><th>Source</th><th>Quantity</th><th>Factor</th><th>tCO₂e</th><th>Scope</th></tr></thead>
-<tbody>
-${userLines.map(l => `<tr>
-  <td>${l.factor.label}</td>
-  <td>${l.input.quantity.toLocaleString()} ${l.input.unit}</td>
-  <td class="formula">${l.audit.kg_co2e_per_unit} kg CO₂e/${l.input.unit}</td>
-  <td><strong>${l.t_co2e.toFixed(4)}</strong></td>
-  <td>${l.scope}</td>
-</tr>
-<tr><td colspan="5" class="formula" style="padding-top:0">${l.audit.formula} · ${l.audit.source_table} · ${l.audit.source_row} · v${l.factor_version}</td></tr>`).join('')}
-</tbody>
-</table>
-
-<h2 style="font-family:monospace;font-size:0.8rem;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:1rem">Well-to-Tank (Scope 3)</h2>
-<table>
-<thead><tr><th>Source</th><th>Quantity</th><th>tCO₂e</th></tr></thead>
-<tbody>
+${narrative ? `<div class="narrative-box"><div class="narrative-label">SECR Narrative</div><p>${narrative}</p></div>` : ''}
+<h2 style="font-family:monospace;font-size:0.78rem;letter-spacing:0.08em;text-transform:uppercase;color:#4a5e46;margin-bottom:12px">Audit Trail</h2>
+<table><thead><tr><th>Source</th><th>Quantity</th><th>Factor</th><th>tCO₂e</th><th>Scope</th></tr></thead><tbody>
+${userLines.map(l => `<tr><td>${l.factor.label}</td><td>${l.input.quantity.toLocaleString()} ${l.input.unit}</td><td class="formula">${l.audit.kg_co2e_per_unit}</td><td><strong>${l.t_co2e.toFixed(4)}</strong></td><td>${l.scope}</td></tr>`).join('')}
+</tbody></table>
+${wttLines.length ? `<h2 style="font-family:monospace;font-size:0.78rem;letter-spacing:0.08em;text-transform:uppercase;color:#4a5e46;margin-bottom:12px">Well-to-Tank (Auto · Scope 3)</h2>
+<table><thead><tr><th>Source</th><th>Quantity</th><th>tCO₂e</th></tr></thead><tbody>
 ${wttLines.map(l => `<tr><td>${l.factor.label}</td><td>${l.input.quantity.toLocaleString()} ${l.input.unit}</td><td>${l.t_co2e.toFixed(4)}</td></tr>`).join('')}
-</tbody>
-</table>
-
-<div class="footer">
-  Calculation ID: ${id} · Methodology: GHG Protocol Corporate Standard · Factors: DESNZ ${factor_version} · Consolidation: Operational Control · Scope 2 Method: Location-Based · Data Quality: ${summary.data_quality_score}/100
-</div>
-</body>
-</html>`
-
-    const blob = new Blob([html], { type: 'text/html' })
-    const url = URL.createObjectURL(blob)
+</tbody></table>` : ''}
+<div class="footer">Calc ID: ${id} &nbsp;·&nbsp; GHG Protocol Corporate Standard &nbsp;·&nbsp; DESNZ ${factor_version} &nbsp;·&nbsp; Operational Control &nbsp;·&nbsp; Location-Based Scope 2 &nbsp;·&nbsp; Quality: ${summary.data_quality_score}/100</div>
+</body></html>`
     const a = document.createElement('a')
-    a.href = url
+    a.href = URL.createObjectURL(new Blob([html], { type: 'text/html' }))
     a.download = `${organisation_name.replace(/\s+/g, '-')}-SECR-${reporting_period_start}.html`
     a.click()
-    URL.revokeObjectURL(url)
   }
 
-  const boxStyle = { background: 'white', border: '1px solid rgba(45,90,39,0.15)', borderRadius: 4, overflow: 'hidden' }
-  const monoSm = { fontFamily: 'DM Mono, monospace', fontSize: '0.7rem', letterSpacing: '0.08em' }
-  const btnStyle = (primary: boolean) => ({
-    padding: '0.6rem 1.2rem', fontSize: '0.85rem', fontWeight: 500,
-    background: primary ? '#2d5a27' : 'white',
-    color: primary ? '#f4f0e8' : '#2d5a27',
-    border: `1px solid ${primary ? '#2d5a27' : '#7aad6e'}`,
-    borderRadius: 3, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
-  })
+  const card = {
+    background: 'var(--surface)', border: '1px solid var(--border)',
+    borderRadius: 'var(--radius)', boxShadow: 'var(--shadow-sm)', overflow: 'hidden',
+  }
+  const cardPad = { padding: '1rem 1.125rem' }
+  const cardHead = {
+    padding: '0.6rem 1.125rem',
+    background: 'var(--surface-2)',
+    borderBottom: '1px solid var(--border)',
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+  }
+  const label = {
+    fontFamily: 'JetBrains Mono, monospace', fontSize: '0.65rem',
+    fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' as const,
+    color: 'var(--text-3)',
+  }
+  const mono = { fontFamily: 'JetBrains Mono, monospace' }
 
-  const userLines = lines.filter(l => !l.input.notes?.startsWith('Auto WTT'))
-  const wttLines = lines.filter(l => l.input.notes?.startsWith('Auto WTT'))
+  const btnPrimary = {
+    padding: '0.4rem 0.875rem', fontSize: '0.78rem', fontWeight: 700,
+    background: 'var(--green)', color: 'white', border: 'none',
+    borderRadius: 'var(--radius-xs)', cursor: 'pointer',
+    boxShadow: '0 1px 4px rgba(26,122,60,0.2)',
+  }
+  const btnSecondary = {
+    padding: '0.4rem 0.875rem', fontSize: '0.78rem', fontWeight: 600,
+    background: 'var(--surface)', color: 'var(--text-2)',
+    border: '1px solid var(--border)', borderRadius: 'var(--radius-xs)', cursor: 'pointer',
+  }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
 
-      {/* Total */}
-      <div style={{ background: '#0e1a12', borderRadius: 4, padding: '1.5rem' }}>
-        <p style={{ ...monoSm, color: '#7aad6e', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Total Emissions</p>
-        <p style={{ fontFamily: 'Playfair Display, serif', fontSize: '3rem', fontWeight: 900, color: '#c8ddb8', letterSpacing: '-0.03em', lineHeight: 1 }}>
-          {summary.total_t_co2e.toLocaleString('en-GB', { maximumFractionDigits: 2 })}
-          <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '1rem', fontWeight: 300, color: '#7aad6e', marginLeft: '0.5rem' }}>tCO₂e</span>
-        </p>
-        <p style={{ ...monoSm, color: 'rgba(200,221,184,0.45)', marginTop: '0.5rem' }}>
-          ±{summary.uncertainty_pct}% uncertainty · DESNZ {factor_version}
-        </p>
-        <div style={{ borderTop: '1px solid rgba(200,221,184,0.1)', marginTop: '0.75rem', paddingTop: '0.75rem' }}>
-          <p style={{ ...monoSm, color: 'rgba(200,221,184,0.4)' }}>{organisation_name} · {reporting_period_start} → {reporting_period_end}</p>
-          <p style={{ ...monoSm, color: 'rgba(200,221,184,0.25)', marginTop: '0.2rem', fontSize: '0.62rem' }}>ID: {id}</p>
+      {/* Total hero card */}
+      <div style={{ background: 'var(--text)', borderRadius: 'var(--radius)', padding: '1.5rem', boxShadow: 'var(--shadow)' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1rem' }}>
+          <div>
+            <p style={{ ...label, color: 'rgba(232,245,236,0.45)', marginBottom: '0.5rem' }}>Total Emissions</p>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
+              <span style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: '3.25rem', color: '#e8f5ec', letterSpacing: '-0.03em', lineHeight: 1 }}>
+                {summary.total_t_co2e.toLocaleString('en-GB', { maximumFractionDigits: 2 })}
+              </span>
+              <span style={{ fontSize: '1rem', color: 'rgba(232,245,236,0.5)', fontWeight: 400 }}>tCO₂e</span>
+            </div>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+              background: 'rgba(232,245,236,0.08)', borderRadius: 20,
+              padding: '0.3rem 0.75rem', marginBottom: '0.5rem',
+            }}>
+              <span style={{ ...label, color: 'rgba(232,245,236,0.5)', fontSize: '0.6rem' }}>±{summary.uncertainty_pct}%</span>
+            </div>
+            <p style={{ ...mono, fontSize: '0.62rem', color: 'rgba(232,245,236,0.3)' }}>DESNZ {factor_version}</p>
+          </div>
+        </div>
+        <div style={{ borderTop: '1px solid rgba(232,245,236,0.08)', paddingTop: '0.875rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <p style={{ ...mono, fontSize: '0.72rem', color: 'rgba(232,245,236,0.35)' }}>
+            {organisation_name} · {reporting_period_start} → {reporting_period_end}
+          </p>
+          <p style={{ ...mono, fontSize: '0.6rem', color: 'rgba(232,245,236,0.2)' }}>{id}</p>
         </div>
       </div>
 
-      {/* Scope breakdown */}
+      {/* Scope cards */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem' }}>
         {[1, 2, 3].map((s, i) => {
           const val = [summary.scope_1_t_co2e, summary.scope_2_t_co2e, summary.scope_3_t_co2e][i]
           const pct = summary.total_t_co2e > 0 ? (val / summary.total_t_co2e * 100).toFixed(1) : '0'
           return (
-            <div key={s} style={{ ...boxStyle, padding: '1rem', textAlign: 'center' }}>
-              <p style={{ ...monoSm, color: SCOPE_COLOURS[i], textTransform: 'uppercase', marginBottom: '0.25rem' }}>Scope {s}</p>
-              <p style={{ fontFamily: 'Playfair Display, serif', fontWeight: 700, fontSize: '1.25rem', color: '#0e1a12' }}>
+            <div key={s} style={{ background: SCOPE_LIGHTS[i], border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '0.875rem 1rem' }}>
+              <p style={{ ...label, color: SCOPE_COLOURS[i], marginBottom: '0.4rem' }}>Scope {s}</p>
+              <p style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: '1.4rem', color: 'var(--text)', letterSpacing: '-0.02em', lineHeight: 1 }}>
                 {val.toLocaleString('en-GB', { maximumFractionDigits: 2 })}
               </p>
-              <p style={{ ...monoSm, color: '#0e1a12', opacity: 0.4, fontSize: '0.65rem' }}>{pct}%</p>
+              <p style={{ ...mono, fontSize: '0.65rem', color: 'var(--text-3)', marginTop: '0.25rem' }}>{pct}%</p>
             </div>
           )
         })}
@@ -178,111 +180,107 @@ ${wttLines.map(l => `<tr><td>${l.factor.label}</td><td>${l.input.quantity.toLoca
 
       {/* Chart */}
       {chartData.length > 0 && (
-        <div style={{ ...boxStyle, padding: '1rem' }}>
-          <p style={{ ...monoSm, color: '#5a7a54', textTransform: 'uppercase', marginBottom: '0.75rem' }}>Breakdown</p>
-          <ResponsiveContainer width="100%" height={120}>
-            <BarChart data={chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-              <XAxis dataKey="name" tick={{ fontSize: 10, fontFamily: 'DM Mono', fill: '#5a7a54' }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 10, fontFamily: 'DM Mono', fill: '#5a7a54' }} axisLine={false} tickLine={false} />
-              <Tooltip formatter={(v: number) => [`${v.toFixed(4)} tCO₂e`, '']}
-                contentStyle={{ fontFamily: 'DM Mono', fontSize: 10, border: '1px solid rgba(45,90,39,0.2)', borderRadius: 3 }} />
-              <Bar dataKey="value" radius={[2, 2, 0, 0]}>
-                {chartData.map((entry, i) => <Cell key={i} fill={entry.colour} />)}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+        <div style={card}>
+          <div style={cardHead}><span style={label}>Breakdown by scope</span></div>
+          <div style={cardPad}>
+            <ResponsiveContainer width="100%" height={110}>
+              <BarChart data={chartData} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
+                <XAxis dataKey="name" tick={{ fontSize: 10, fontFamily: 'JetBrains Mono', fill: 'var(--text-3)' }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 10, fontFamily: 'JetBrains Mono', fill: 'var(--text-3)' }} axisLine={false} tickLine={false} />
+                <Tooltip formatter={(v: number) => [`${v.toFixed(4)} tCO₂e`, '']}
+                  contentStyle={{ fontFamily: 'JetBrains Mono', fontSize: 10, border: '1px solid var(--border)', borderRadius: 6, boxShadow: 'var(--shadow-sm)' }} />
+                <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                  {chartData.map((entry, i) => <Cell key={i} fill={entry.colour} />)}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       )}
 
-      {/* Quality */}
-      <div style={{ ...boxStyle, padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <p style={{ ...monoSm, color: '#5a7a54', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Data Quality</p>
-          <p style={{ fontFamily: 'Playfair Display, serif', fontWeight: 700, fontSize: '1.5rem', color: qualityColour }}>{summary.data_quality_score}/100</p>
+      {/* Quality + actions row */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+        <div style={{ ...card, ...cardPad }}>
+          <p style={{ ...label, marginBottom: '0.4rem' }}>Data Quality</p>
+          <p style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: '1.75rem', color: qualityColour, letterSpacing: '-0.02em', lineHeight: 1 }}>
+            {summary.data_quality_score}<span style={{ fontSize: '0.9rem', opacity: 0.4, fontFamily: 'Plus Jakarta Sans' }}>/100</span>
+          </p>
+          <p style={{ ...mono, fontSize: '0.65rem', color: 'var(--text-3)', marginTop: '0.3rem' }}>
+            {lines.length} lines · {wttLines.length} WTT auto
+          </p>
         </div>
-        <div style={{ textAlign: 'right' }}>
-          <p style={{ ...monoSm, color: '#0e1a12', opacity: 0.45 }}>{lines.length} lines ({userLines.length} user + {wttLines.length} WTT)</p>
-          {summary.estimated_lines > 0 && <p style={{ ...monoSm, color: '#d4a843', marginTop: '0.2rem' }}>{summary.estimated_lines} estimated</p>}
+        <div style={{ ...card, ...cardPad, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '0.5rem' }}>
+          <button onClick={exportReport} style={btnSecondary}>↓ Export HTML report</button>
         </div>
       </div>
 
       {/* SECR Narrative */}
-      <div style={boxStyle}>
-        <div style={{ padding: '0.75rem 1rem', background: '#e8ede4', borderBottom: '1px solid rgba(45,90,39,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <p style={{ ...monoSm, color: '#5a7a54', textTransform: 'uppercase' }}>SECR Narrative Draft</p>
-          {!narrative && (
-            <button onClick={generateNarrative} disabled={narrativeLoading} style={btnStyle(true)}>
-              {narrativeLoading ? 'Generating…' : 'Generate with AI'}
-            </button>
-          )}
+      <div style={card}>
+        <div style={cardHead}>
+          <span style={label}>SECR Narrative</span>
+          <button onClick={generateNarrative} disabled={narrativeLoading} style={btnPrimary}>
+            {narrativeLoading ? 'Generating…' : narrative ? 'Regenerate' : 'Generate with AI ✦'}
+          </button>
         </div>
-        {narrative && (
-          <div style={{ padding: '1rem 1.25rem' }}>
-            <p style={{ fontSize: '0.9rem', lineHeight: 1.7, color: '#0e1a12' }}>{narrative}</p>
-            <button onClick={generateNarrative} disabled={narrativeLoading}
-              style={{ ...btnStyle(false), marginTop: '0.75rem', fontSize: '0.75rem', padding: '0.3rem 0.75rem' }}>
-              Regenerate
-            </button>
+        {narrative ? (
+          <div style={{ ...cardPad, borderTop: '1px solid var(--border)' }}>
+            <p style={{ fontSize: '0.875rem', lineHeight: 1.75, color: 'var(--text)' }}>{narrative}</p>
           </div>
-        )}
-        {narrativeError && <p style={{ padding: '1rem', color: '#c45c2a', fontFamily: 'DM Mono, monospace', fontSize: '0.75rem' }}>{narrativeError}</p>}
-        {!narrative && !narrativeLoading && (
-          <p style={{ padding: '1rem', ...monoSm, color: '#0e1a12', opacity: 0.35 }}>
-            Click Generate to draft a SECR narrative suitable for your annual report.
+        ) : narrativeError ? (
+          <p style={{ ...cardPad, ...mono, fontSize: '0.75rem', color: 'var(--red)' }}>{narrativeError}</p>
+        ) : (
+          <p style={{ ...cardPad, ...mono, fontSize: '0.72rem', color: 'var(--text-3)' }}>
+            Click Generate to draft a SECR-compliant narrative for your annual report.
           </p>
         )}
       </div>
 
-      {/* Actions */}
-      <div style={{ display: 'flex', gap: '0.75rem' }}>
-        <button onClick={exportPDF} style={{ ...btnStyle(false), flex: 1 }}>
-          ↓ Export Report (HTML)
-        </button>
-      </div>
-
-      {/* Audit Trail */}
-      <div style={boxStyle}>
-        <div style={{ padding: '0.75rem 1rem', background: '#e8ede4', borderBottom: '1px solid rgba(45,90,39,0.1)' }}>
-          <p style={{ ...monoSm, color: '#5a7a54', textTransform: 'uppercase' }}>Audit Trail — User Inputs</p>
-        </div>
+      {/* User audit trail */}
+      <div style={card}>
+        <div style={cardHead}><span style={label}>Audit Trail — Activity Inputs</span></div>
         {userLines.map((line, i) => (
-          <div key={i} style={{ padding: '0.75rem 1rem', borderBottom: i < userLines.length - 1 ? '1px solid rgba(45,90,39,0.08)' : 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
+          <div key={i} style={{
+            ...cardPad, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem',
+            borderBottom: i < userLines.length - 1 ? '1px solid var(--border)' : 'none',
+          }}>
             <div style={{ flex: 1 }}>
-              <p style={{ fontSize: '0.875rem', fontWeight: 500, color: '#0e1a12', marginBottom: '0.2rem' }}>
-                {line.factor.label}
-                {line.input.estimated && <span style={{ marginLeft: '0.5rem', fontFamily: 'DM Mono, monospace', fontSize: '0.6rem', padding: '0.1rem 0.4rem', background: 'rgba(212,168,67,0.15)', color: '#d4a843', borderRadius: 2 }}>est.</span>}
-              </p>
-              <p style={{ fontFamily: 'DM Mono, monospace', fontSize: '0.65rem', color: '#5a7a54' }}>{line.audit.formula}</p>
-              <p style={{ fontFamily: 'DM Mono, monospace', fontSize: '0.6rem', color: '#0e1a12', opacity: 0.35, marginTop: '0.15rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                <p style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text)' }}>{line.factor.label}</p>
+                {line.input.estimated && (
+                  <span style={{ ...mono, fontSize: '0.6rem', padding: '0.1rem 0.4rem', background: 'var(--amber-light)', color: 'var(--amber)', borderRadius: 20 }}>estimated</span>
+                )}
+              </div>
+              <p style={{ ...mono, fontSize: '0.68rem', color: 'var(--text-3)' }}>{line.audit.formula}</p>
+              <p style={{ ...mono, fontSize: '0.6rem', color: 'var(--border-strong)', marginTop: '0.2rem' }}>
                 {line.audit.source_table} · {line.audit.source_row} · v{line.factor_version}
               </p>
             </div>
             <div style={{ textAlign: 'right', flexShrink: 0 }}>
-              <p style={{ fontFamily: 'Playfair Display, serif', fontWeight: 700, fontSize: '1.1rem', color: '#0e1a12' }}>{line.t_co2e.toFixed(4)}</p>
-              <p style={{ fontFamily: 'DM Mono, monospace', fontSize: '0.6rem', color: '#5a7a54' }}>tCO₂e</p>
+              <p style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: '1.1rem', color: 'var(--text)' }}>{line.t_co2e.toFixed(4)}</p>
+              <p style={{ ...mono, fontSize: '0.6rem', color: 'var(--text-3)' }}>tCO₂e</p>
             </div>
           </div>
         ))}
       </div>
 
-      {/* WTT Lines */}
+      {/* WTT audit trail */}
       {wttLines.length > 0 && (
-        <div style={boxStyle}>
-          <div style={{ padding: '0.75rem 1rem', background: '#e8ede4', borderBottom: '1px solid rgba(45,90,39,0.1)' }}>
-            <p style={{ ...monoSm, color: '#7a5c00', textTransform: 'uppercase' }}>Audit Trail — Well-to-Tank (Auto) · Scope 3</p>
+        <div style={card}>
+          <div style={cardHead}>
+            <span style={{ ...label, color: 'var(--amber)' }}>Well-to-Tank — Auto-calculated · Scope 3</span>
           </div>
           {wttLines.map((line, i) => (
-            <div key={i} style={{ padding: '0.75rem 1rem', borderBottom: i < wttLines.length - 1 ? '1px solid rgba(45,90,39,0.08)' : 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
-              <div style={{ flex: 1 }}>
-                <p style={{ fontSize: '0.875rem', fontWeight: 500, color: '#0e1a12', marginBottom: '0.2rem' }}>{line.factor.label}</p>
-                <p style={{ fontFamily: 'DM Mono, monospace', fontSize: '0.65rem', color: '#5a7a54' }}>{line.audit.formula}</p>
-                <p style={{ fontFamily: 'DM Mono, monospace', fontSize: '0.6rem', color: '#0e1a12', opacity: 0.35, marginTop: '0.15rem' }}>
-                  {line.audit.source_table} · v{line.factor_version} · auto-calculated
-                </p>
+            <div key={i} style={{
+              ...cardPad, display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              borderBottom: i < wttLines.length - 1 ? '1px solid var(--border)' : 'none',
+            }}>
+              <div>
+                <p style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--text)', marginBottom: '0.2rem' }}>{line.factor.label}</p>
+                <p style={{ ...mono, fontSize: '0.65rem', color: 'var(--text-3)' }}>{line.audit.formula}</p>
               </div>
-              <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                <p style={{ fontFamily: 'Playfair Display, serif', fontWeight: 700, fontSize: '1.1rem', color: '#0e1a12' }}>{line.t_co2e.toFixed(4)}</p>
-                <p style={{ fontFamily: 'DM Mono, monospace', fontSize: '0.6rem', color: '#5a7a54' }}>tCO₂e</p>
+              <div style={{ textAlign: 'right' }}>
+                <p style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: '1rem', color: 'var(--text)' }}>{line.t_co2e.toFixed(4)}</p>
+                <p style={{ ...mono, fontSize: '0.6rem', color: 'var(--text-3)' }}>tCO₂e</p>
               </div>
             </div>
           ))}

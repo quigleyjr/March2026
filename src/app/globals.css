@@ -2,10 +2,46 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,400&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Syne:wght@700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  --white: #ffffff;
+  --bg: #f6f8f5;
+  --surface: #ffffff;
+  --surface-2: #f0f4ee;
+  --border: #e4eae2;
+  --border-strong: #c8d8c4;
+  --text: #141a12;
+  --text-2: #4a5e46;
+  --text-3: #8a9e86;
+  --green: #1a7a3c;
+  --green-light: #e8f5ec;
+  --green-mid: #4ca66a;
+  --blue: #1a4d8c;
+  --blue-light: #eaf0f9;
+  --amber: #b87a00;
+  --amber-light: #fdf3dc;
+  --red: #b83232;
+  --red-light: #fdeaea;
+  --shadow-sm: 0 1px 3px rgba(20,26,18,0.06), 0 1px 2px rgba(20,26,18,0.04);
+  --shadow: 0 4px 12px rgba(20,26,18,0.08), 0 1px 3px rgba(20,26,18,0.05);
+  --shadow-lg: 0 12px 32px rgba(20,26,18,0.1), 0 4px 8px rgba(20,26,18,0.06);
+  --radius: 12px;
+  --radius-sm: 8px;
+  --radius-xs: 5px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  background: #f4f0e8;
-  color: #0e1a12;
-  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+input, select, button, textarea {
+  font-family: inherit;
 }

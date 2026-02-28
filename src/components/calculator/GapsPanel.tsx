@@ -5,28 +5,41 @@ import type { GapItem } from '@/types'
 interface Props { gaps: GapItem[] }
 
 const CONFIG = {
-  critical: { colour: '#c45c2a', bg: 'rgba(196,92,42,0.07)', icon: '⚠' },
-  moderate: { colour: '#d4a843', bg: 'rgba(212,168,67,0.07)', icon: '◎' },
-  minor:    { colour: '#5a7a54', bg: 'rgba(90,122,84,0.07)',  icon: '→' },
+  critical: { colour: 'var(--red)',   bg: 'var(--red-light)',   icon: '⚠' },
+  moderate: { colour: 'var(--amber)', bg: 'var(--amber-light)', icon: '◎' },
+  minor:    { colour: 'var(--green)', bg: 'var(--green-light)', icon: '→' },
 }
 
 export function GapsPanel({ gaps }: Props) {
+  const mono = { fontFamily: 'JetBrains Mono, monospace' }
   return (
-    <div style={{ background: 'white', border: '1px solid rgba(45,90,39,0.15)', borderRadius: 4, overflow: 'hidden' }}>
-      <div style={{ padding: '0.75rem 1rem', background: '#e8ede4', borderBottom: '1px solid rgba(45,90,39,0.1)' }}>
-        <p style={{ fontFamily: 'DM Mono, monospace', fontSize: '0.7rem', color: '#5a7a54', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+    <div style={{
+      background: 'var(--surface)', border: '1px solid var(--border)',
+      borderRadius: 'var(--radius)', boxShadow: 'var(--shadow-sm)', overflow: 'hidden',
+    }}>
+      <div style={{
+        padding: '0.6rem 1.125rem',
+        background: 'var(--surface-2)',
+        borderBottom: '1px solid var(--border)',
+      }}>
+        <span style={{ ...mono, fontSize: '0.65rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: 'var(--text-3)' }}>
           Compliance Gaps ({gaps.length})
-        </p>
+        </span>
       </div>
-      {gaps.map((gap) => {
+      {gaps.map((gap, i) => {
         const { colour, bg, icon } = CONFIG[gap.severity]
         return (
-          <div key={gap.code} style={{ padding: '0.75rem 1rem', background: bg, borderBottom: '1px solid rgba(45,90,39,0.06)', display: 'flex', gap: '0.75rem' }}>
-            <span style={{ color: colour, flexShrink: 0, fontSize: '0.9rem' }}>{icon}</span>
+          <div key={gap.code} style={{
+            padding: '0.875rem 1.125rem',
+            background: bg,
+            borderBottom: i < gaps.length - 1 ? '1px solid var(--border)' : 'none',
+            display: 'flex', gap: '0.75rem', alignItems: 'flex-start',
+          }}>
+            <span style={{ color: colour, fontSize: '0.9rem', flexShrink: 0, marginTop: 1 }}>{icon}</span>
             <div>
-              <p style={{ fontSize: '0.875rem', fontWeight: 500, color: '#0e1a12', marginBottom: '0.2rem' }}>{gap.message}</p>
-              <p style={{ fontSize: '0.8rem', color: '#0e1a12', opacity: 0.6 }}>{gap.recommendation}</p>
-              <p style={{ fontFamily: 'DM Mono, monospace', fontSize: '0.6rem', color: colour, marginTop: '0.3rem', letterSpacing: '0.06em' }}>
+              <p style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text)', marginBottom: '0.2rem' }}>{gap.message}</p>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-2)', lineHeight: 1.5 }}>{gap.recommendation}</p>
+              <p style={{ ...mono, fontSize: '0.6rem', color: colour, marginTop: '0.35rem', letterSpacing: '0.06em' }}>
                 {gap.severity.toUpperCase()} · {gap.code}
               </p>
             </div>
