@@ -14,6 +14,7 @@ export function ResultsPanel({ result }: Props) {
   const [narrative, setNarrative] = useState('')
   const [narrativeLoading, setNarrativeLoading] = useState(false)
   const [narrativeError, setNarrativeError] = useState('')
+  const [pdfLoading, setPdfLoading] = useState(false)
 
   const userLines = lines.filter(l => !l.input.notes?.startsWith('Auto WTT'))
   const wttLines  = lines.filter(l =>  l.input.notes?.startsWith('Auto WTT'))
@@ -41,6 +42,32 @@ export function ResultsPanel({ result }: Props) {
       setNarrativeError(e instanceof Error ? e.message : 'Failed')
     } finally {
       setNarrativeLoading(false)
+    }
+  }
+
+  async function downloadPdf() {
+    setPdfLoading(true)
+    try {
+      const res = await fetch('/api/pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ result, narrative }),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'PDF generation failed')
+      }
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${organisation_name.replace(/\s+/g, '-')}-SECR-${reporting_period_start}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'PDF generation failed')
+    } finally {
+      setPdfLoading(false)
     }
   }
 
@@ -257,7 +284,15 @@ ${wttLines.map(l => `<tr><td>${l.factor.label}</td><td>${l.input.quantity.toLoca
           <p style={{ ...mono, fontSize: '0.65rem', color: 'var(--text-3)', marginTop: '0.3rem' }}>{lines.length} lines · {wttLines.length} WTT auto</p>
         </div>
         <div style={{ ...card, ...cardPad, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-          <button onClick={exportReport} style={btnSecondary}>↓ Export &amp; Print PDF</button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+            <button onClick={downloadPdf} disabled={pdfLoading}
+              style={{ ...btnPrimary, background: pdfLoading ? 'var(--border-strong)' : 'var(--green)', color: pdfLoading ? 'var(--text-3)' : 'white', cursor: pdfLoading ? 'wait' : 'pointer' }}>
+              {pdfLoading ? 'Generating PDF…' : '↓ Download PDF'}
+            </button>
+            <button onClick={exportReport} style={{ ...btnSecondary, fontSize: '0.72rem', padding: '0.3rem 0.875rem', opacity: 0.7 }}>
+              Print / Save as PDF
+            </button>
+          </div>
         </div>
       </div>
 
