@@ -1,108 +1,112 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import type { ActivityInput, CalculationResult, OrgProfile } from '@/types'
 import { ResultsPanel } from '@/components/calculator/ResultsPanel'
 import { InputForm } from '@/components/calculator/InputForm'
 import { GapsPanel } from '@/components/calculator/GapsPanel'
 
-const TEST_PROFILES: { label: string; profile: OrgProfile; inputs: { factor_id: string; source_type: string; quantity: number; unit: string; site?: string }[] }[] = [
+type Template = {
+  organisation_name: string
+  inputs: { factor_id: string; source_type: string; quantity: number; unit: string; site?: string; estimated?: boolean }[]
+}
+
+const TEST_PROFILES: { label: string; profile: OrgProfile; inputs: Template['inputs'] }[] = [
   {
-    label: 'Acme Manufacturing Ltd — Multi-site',
+    label: 'Acme Manufacturing — Multi-site',
     profile: { name: 'Acme Manufacturing Ltd', sector: 'Manufacturing', employees: 320, revenue_m: 28.5, floor_area_m2: 12000, companies_house: '09876543', sites: ['Sheffield Works', 'Leeds Office', 'Manchester Depot'] },
     inputs: [
-      { factor_id: 'natural_gas_kwh', source_type: 'natural_gas_kwh', quantity: 180000, unit: 'kWh', site: 'Sheffield Works' },
-      { factor_id: 'natural_gas_kwh', source_type: 'natural_gas_kwh', quantity: 32000,  unit: 'kWh', site: 'Leeds Office' },
-      { factor_id: 'electricity_kwh', source_type: 'electricity_kwh', quantity: 420000, unit: 'kWh', site: 'Sheffield Works' },
-      { factor_id: 'electricity_kwh', source_type: 'electricity_kwh', quantity: 85000,  unit: 'kWh', site: 'Leeds Office' },
-      { factor_id: 'electricity_kwh', source_type: 'electricity_kwh', quantity: 44000,  unit: 'kWh', site: 'Manchester Depot' },
-      { factor_id: 'diesel_litres',   source_type: 'diesel_litres',   quantity: 12500,  unit: 'litres', site: 'Manchester Depot' },
-      { factor_id: 'flight_short_haul', source_type: 'flight_short_haul', quantity: 8400, unit: 'km' },
+      { factor_id: 'natural_gas_kwh',   source_type: 'natural_gas_kwh',   quantity: 180000, unit: 'kWh',    site: 'Sheffield Works' },
+      { factor_id: 'natural_gas_kwh',   source_type: 'natural_gas_kwh',   quantity: 32000,  unit: 'kWh',    site: 'Leeds Office' },
+      { factor_id: 'electricity_kwh',   source_type: 'electricity_kwh',   quantity: 420000, unit: 'kWh',    site: 'Sheffield Works' },
+      { factor_id: 'electricity_kwh',   source_type: 'electricity_kwh',   quantity: 85000,  unit: 'kWh',    site: 'Leeds Office' },
+      { factor_id: 'electricity_kwh',   source_type: 'electricity_kwh',   quantity: 44000,  unit: 'kWh',    site: 'Manchester Depot' },
+      { factor_id: 'diesel_litres',     source_type: 'diesel_litres',     quantity: 12500,  unit: 'litres', site: 'Manchester Depot' },
+      { factor_id: 'flight_short_haul', source_type: 'flight_short_haul', quantity: 8400,   unit: 'km' },
     ],
   },
   {
     label: 'Greenleaf Consulting — Professional Services',
     profile: { name: 'Greenleaf Consulting', sector: 'Professional Services', employees: 45, revenue_m: 4.2, floor_area_m2: 850, sites: ['London HQ'] },
     inputs: [
-      { factor_id: 'natural_gas_kwh', source_type: 'natural_gas_kwh', quantity: 18000,  unit: 'kWh', site: 'London HQ' },
-      { factor_id: 'electricity_kwh', source_type: 'electricity_kwh', quantity: 52000,  unit: 'kWh', site: 'London HQ' },
-      { factor_id: 'flight_long_haul', source_type: 'flight_long_haul', quantity: 24000, unit: 'km' },
-      { factor_id: 'flight_short_haul', source_type: 'flight_short_haul', quantity: 12000, unit: 'km' },
-      { factor_id: 'rail_national',   source_type: 'rail_national',   quantity: 18500,  unit: 'km' },
-      { factor_id: 'grey_fleet_petrol', source_type: 'grey_fleet_petrol', quantity: 22000, unit: 'km' },
+      { factor_id: 'natural_gas_kwh',     source_type: 'natural_gas_kwh',     quantity: 18000, unit: 'kWh' },
+      { factor_id: 'electricity_kwh',     source_type: 'electricity_kwh',     quantity: 52000, unit: 'kWh' },
+      { factor_id: 'flight_long_haul',    source_type: 'flight_long_haul',    quantity: 24000, unit: 'km' },
+      { factor_id: 'flight_short_haul',   source_type: 'flight_short_haul',   quantity: 12000, unit: 'km' },
+      { factor_id: 'rail_national',       source_type: 'rail_national',       quantity: 18500, unit: 'km' },
+      { factor_id: 'grey_fleet_petrol',   source_type: 'grey_fleet_petrol',   quantity: 22000, unit: 'km' },
     ],
   },
   {
     label: 'Swift Logistics — Transport & Fleet',
     profile: { name: 'Swift Logistics Ltd', sector: 'Logistics & Transport', employees: 180, revenue_m: 15.8, floor_area_m2: 6500, sites: ['Birmingham Hub', 'Bristol Depot'] },
     inputs: [
-      { factor_id: 'diesel_litres',   source_type: 'diesel_litres',   quantity: 85000,  unit: 'litres', site: 'Birmingham Hub' },
-      { factor_id: 'diesel_litres',   source_type: 'diesel_litres',   quantity: 42000,  unit: 'litres', site: 'Bristol Depot' },
-      { factor_id: 'natural_gas_kwh', source_type: 'natural_gas_kwh', quantity: 28000,  unit: 'kWh', site: 'Birmingham Hub' },
-      { factor_id: 'electricity_kwh', source_type: 'electricity_kwh', quantity: 68000,  unit: 'kWh', site: 'Birmingham Hub' },
-      { factor_id: 'electricity_kwh', source_type: 'electricity_kwh', quantity: 31000,  unit: 'kWh', site: 'Bristol Depot' },
+      { factor_id: 'diesel_litres',     source_type: 'diesel_litres',     quantity: 85000, unit: 'litres', site: 'Birmingham Hub' },
+      { factor_id: 'diesel_litres',     source_type: 'diesel_litres',     quantity: 42000, unit: 'litres', site: 'Bristol Depot' },
+      { factor_id: 'natural_gas_kwh',   source_type: 'natural_gas_kwh',   quantity: 28000, unit: 'kWh',    site: 'Birmingham Hub' },
+      { factor_id: 'electricity_kwh',   source_type: 'electricity_kwh',   quantity: 68000, unit: 'kWh',    site: 'Birmingham Hub' },
+      { factor_id: 'electricity_kwh',   source_type: 'electricity_kwh',   quantity: 31000, unit: 'kWh',    site: 'Bristol Depot' },
     ],
   },
   {
     label: 'Riverstone Retail — Single Site',
     profile: { name: 'Riverstone Retail Ltd', sector: 'Retail', employees: 62, revenue_m: 7.1, floor_area_m2: 2200, sites: ['Bristol Store'] },
     inputs: [
-      { factor_id: 'natural_gas_kwh', source_type: 'natural_gas_kwh', quantity: 41000,  unit: 'kWh', site: 'Bristol Store' },
-      { factor_id: 'electricity_kwh', source_type: 'electricity_kwh', quantity: 148000, unit: 'kWh', site: 'Bristol Store' },
-      { factor_id: 'van_diesel_km',   source_type: 'van_diesel_km',   quantity: 28000,  unit: 'km',  site: 'Bristol Store' },
+      { factor_id: 'natural_gas_kwh',   source_type: 'natural_gas_kwh',   quantity: 41000,  unit: 'kWh' },
+      { factor_id: 'electricity_kwh',   source_type: 'electricity_kwh',   quantity: 148000, unit: 'kWh' },
+      { factor_id: 'van_diesel_km',     source_type: 'van_diesel_km',     quantity: 28000,  unit: 'km' },
     ],
   },
   {
     label: 'Northfield Academy — Education',
     profile: { name: 'Northfield Academy', sector: 'Education', employees: 110, revenue_m: 6.8, floor_area_m2: 8500, sites: ['Main Campus'] },
     inputs: [
-      { factor_id: 'natural_gas_kwh', source_type: 'natural_gas_kwh', quantity: 295000, unit: 'kWh', site: 'Main Campus' },
-      { factor_id: 'electricity_kwh', source_type: 'electricity_kwh', quantity: 210000, unit: 'kWh', site: 'Main Campus' },
-      { factor_id: 'petrol_litres',   source_type: 'petrol_litres',   quantity: 3200,   unit: 'litres' },
+      { factor_id: 'natural_gas_kwh',   source_type: 'natural_gas_kwh',   quantity: 295000, unit: 'kWh' },
+      { factor_id: 'electricity_kwh',   source_type: 'electricity_kwh',   quantity: 210000, unit: 'kWh' },
+      { factor_id: 'petrol_litres',     source_type: 'petrol_litres',     quantity: 3200,   unit: 'litres' },
     ],
   },
 ]
 
-export default function DashboardPage() {
+function DashboardInner() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [result, setResult] = useState<CalculationResult | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [profile, setProfile] = useState<OrgProfile | null>(null)
-  const [formKey, setFormKey] = useState(0)
-  const [reuseTemplate, setReuseTemplate] = useState<{
-    organisation_name: string
-    inputs: { factor_id: string; source_type: string; quantity: number; unit: string; site?: string; estimated?: boolean }[]
-  } | null>(null)
+  // template + mountKey together: incrementing mountKey forces InputForm to remount
+  // with the latest template already in state
+  const [template, setTemplate] = useState<Template | null>(null)
+  const [mountKey, setMountKey] = useState(0)
 
   useEffect(() => {
     const saved = localStorage.getItem('org_profile')
     if (saved) setProfile(JSON.parse(saved))
 
-    const template = localStorage.getItem('reuse_template')
-    if (template) {
-      setReuseTemplate(JSON.parse(template))
-      setFormKey(k => k + 1)
+    const reuse = localStorage.getItem('reuse_template')
+    if (reuse) {
       localStorage.removeItem('reuse_template')
+      const parsed: Template = JSON.parse(reuse)
+      setTemplate(parsed)
+      setMountKey(k => k + 1)
     }
-  }, [])
+  }, [searchParams])
+
+  function loadTemplate(t: Template) {
+    setTemplate(t)
+    setMountKey(k => k + 1)
+    setResult(null)
+  }
 
   function applyTestProfile(idx: string) {
     if (!idx) return
     const tp = TEST_PROFILES[parseInt(idx)]
     if (!tp) return
-    // Save profile to localStorage (same as onboarding)
     localStorage.setItem('org_profile', JSON.stringify(tp.profile))
     setProfile(tp.profile)
-    // Set reuse template with the test inputs
-    const template = {
-      organisation_name: tp.profile.name,
-      inputs: tp.inputs.map(inp => ({ ...inp, estimated: false })),
-    }
-    setReuseTemplate({ ...template })
-    setFormKey(k => k + 1)
-    setResult(null)
+    loadTemplate({ organisation_name: tp.profile.name, inputs: tp.inputs.map(i => ({ ...i, estimated: false })) })
   }
 
   async function handleCalculate(data: {
@@ -120,11 +124,7 @@ export default function DashboardPage() {
         body: JSON.stringify({
           ...data,
           save: true,
-          intensity: profile ? {
-            employees: profile.employees,
-            revenue_m: profile.revenue_m,
-            floor_area_m2: profile.floor_area_m2,
-          } : undefined,
+          intensity: profile ? { employees: profile.employees, revenue_m: profile.revenue_m, floor_area_m2: profile.floor_area_m2 } : undefined,
         }),
       })
       const json = await res.json()
@@ -141,21 +141,16 @@ export default function DashboardPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-      <nav style={{
-        background: 'var(--white)', borderBottom: '1px solid var(--border)',
-        padding: '0 2rem', height: 56,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        position: 'sticky', top: 0, zIndex: 50, boxShadow: 'var(--shadow-sm)',
-      }}>
+      <nav style={{ background: 'var(--white)', borderBottom: '1px solid var(--border)', padding: '0 2rem', height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky' as const, top: 0, zIndex: 50, boxShadow: 'var(--shadow-sm)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <div style={{ width: 28, height: 28, background: 'var(--green)', borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2L9.5 6H4.5L7 2Z" fill="white"/><path d="M2 9.5C2 7.5 4.5 6 7 6C9.5 6 12 7.5 12 9.5C12 11.5 9.5 12 7 12C4.5 12 2 11.5 2 9.5Z" fill="white" opacity="0.6"/></svg>
           </div>
           <span style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: '1rem', color: 'var(--text)' }}>
-            February<span style={{ color: 'var(--green)' }}>2026</span>
+            March<span style={{ color: 'var(--green)' }}>0603</span>
           </span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'var(--green-light)', borderRadius: 20, padding: '0.3rem 0.75rem' }}>
             <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--green-mid)' }} />
             <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--green)' }}>Live</span>
@@ -168,69 +163,51 @@ export default function DashboardPage() {
             style={{ ...mono, fontSize: '0.72rem', color: 'var(--text-3)', background: 'none', border: '1px solid var(--border)', padding: '0.3rem 0.75rem', borderRadius: 'var(--radius-xs)', cursor: 'pointer' }}>
             {profile ? '⚙ Profile' : '+ Setup'}
           </button>
-
-          {/* Test profiles dropdown */}
-          <div style={{ position: 'relative' as const }}>
-            <select
-              defaultValue=""
-              onChange={e => { applyTestProfile(e.target.value); e.target.value = '' }}
-              style={{
-                ...mono, fontSize: '0.72rem', color: 'var(--green)',
-                background: 'var(--green-light)', border: '1px solid var(--border-strong)',
-                padding: '0.3rem 0.75rem', borderRadius: 'var(--radius-xs)', cursor: 'pointer',
-                outline: 'none', maxWidth: 180,
-              }}>
-              <option value="" disabled>⚗ Test profile…</option>
-              {TEST_PROFILES.map((tp, i) => (
-                <option key={i} value={String(i)}>{tp.label}</option>
-              ))}
-            </select>
-          </div>
+          <select
+            value=""
+            onChange={e => { applyTestProfile(e.target.value) }}
+            style={{ ...mono, fontSize: '0.72rem', color: 'var(--green)', background: 'var(--green-light)', border: '1px solid var(--border-strong)', padding: '0.3rem 0.75rem', borderRadius: 'var(--radius-xs)', cursor: 'pointer', outline: 'none', maxWidth: 190 }}>
+            <option value="" disabled>⚗ Test profile…</option>
+            {TEST_PROFILES.map((tp, i) => (
+              <option key={i} value={String(i)}>{tp.label}</option>
+            ))}
+          </select>
         </div>
       </nav>
 
       <main style={{ maxWidth: 1200, margin: '0 auto', padding: '2rem 1.5rem' }}>
 
-        {/* Reuse template banner */}
-        {reuseTemplate && (
-          <div style={{
-            marginBottom: '1.25rem', padding: '0.875rem 1.25rem',
-            background: 'var(--blue-light)', border: '1px solid rgba(26,77,140,0.2)',
-            borderRadius: 'var(--radius-sm)',
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          }}>
+        {template && (
+          <div style={{ marginBottom: '1.25rem', padding: '0.875rem 1.25rem', background: 'var(--blue-light)', border: '1px solid rgba(26,77,140,0.2)', borderRadius: 'var(--radius-sm)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <p style={{ fontSize: '0.875rem', color: 'var(--blue)', fontWeight: 500 }}>
-              ↺ {reuseTemplate.inputs.length} emission source{reuseTemplate.inputs.length !== 1 ? 's' : ''} loaded from history — update the dates and calculate
+              ↺ {template.inputs.length} emission source{template.inputs.length !== 1 ? 's' : ''} loaded — update the dates and calculate
             </p>
+            <button onClick={() => { setTemplate(null); setMountKey(k => k + 1) }}
+              style={{ ...mono, fontSize: '0.7rem', color: 'var(--blue)', background: 'none', border: '1px solid rgba(26,77,140,0.3)', padding: '0.2rem 0.6rem', borderRadius: 'var(--radius-xs)', cursor: 'pointer' }}>
+              Clear
+            </button>
           </div>
         )}
 
-        {/* Profile banner if no profile */}
         {!profile && (
-          <div style={{
-            marginBottom: '1.25rem', padding: '0.875rem 1.25rem',
-            background: 'var(--amber-light)', border: '1px solid rgba(184,122,0,0.2)',
-            borderRadius: 'var(--radius-sm)',
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          }}>
+          <div style={{ marginBottom: '1.25rem', padding: '0.875rem 1.25rem', background: 'var(--amber-light)', border: '1px solid rgba(184,122,0,0.2)', borderRadius: 'var(--radius-sm)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <p style={{ fontSize: '0.875rem', color: 'var(--amber)', fontWeight: 500 }}>
               ◎ Set up your organisation profile to enable intensity metrics and site tracking
             </p>
             <button onClick={() => router.push('/onboarding')}
-              style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--amber)', background: 'none', border: '1px solid currentColor', padding: '0.3rem 0.75rem', borderRadius: 'var(--radius-xs)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--amber)', background: 'none', border: '1px solid currentColor', padding: '0.3rem 0.75rem', borderRadius: 'var(--radius-xs)', cursor: 'pointer', whiteSpace: 'nowrap' as const }}>
               Set up →
             </button>
           </div>
         )}
 
-        {/* Profile summary if set */}
         {profile && (
           <div style={{ marginBottom: '1.25rem', padding: '0.75rem 1.25rem', background: 'var(--green-light)', border: '1px solid var(--border-strong)', borderRadius: 'var(--radius-sm)', display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
             <span style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--green)' }}>{profile.name}</span>
             {profile.sector && <span style={{ ...mono, fontSize: '0.68rem', color: 'var(--text-3)' }}>{profile.sector}</span>}
             {profile.employees && <span style={{ ...mono, fontSize: '0.68rem', color: 'var(--text-3)' }}>{profile.employees.toLocaleString()} employees</span>}
             {profile.revenue_m && <span style={{ ...mono, fontSize: '0.68rem', color: 'var(--text-3)' }}>£{profile.revenue_m}m revenue</span>}
-            {profile.sites.filter(Boolean).length > 0 && <span style={{ ...mono, fontSize: '0.68rem', color: 'var(--text-3)' }}>{profile.sites.filter(Boolean).length} sites</span>}
+            {profile.sites?.filter(Boolean).length > 0 && <span style={{ ...mono, fontSize: '0.68rem', color: 'var(--text-3)' }}>{profile.sites.filter(Boolean).length} sites</span>}
           </div>
         )}
 
@@ -248,7 +225,13 @@ export default function DashboardPage() {
 
         <div style={{ display: 'grid', gap: '1.5rem', gridTemplateColumns: result ? '420px 1fr' : '520px' }}>
           <div>
-            <InputForm key={formKey} onCalculate={handleCalculate} loading={loading} profile={profile} reuseTemplate={reuseTemplate} />
+            <InputForm
+              key={mountKey}
+              onCalculate={handleCalculate}
+              loading={loading}
+              profile={profile}
+              template={template}
+            />
             {error && (
               <div style={{ marginTop: '0.75rem', padding: '0.75rem 1rem', background: 'var(--red-light)', color: 'var(--red)', border: '1px solid rgba(184,50,50,0.2)', borderRadius: 'var(--radius-sm)', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.75rem' }}>
                 {error}
@@ -265,5 +248,13 @@ export default function DashboardPage() {
         </div>
       </main>
     </div>
+  )
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense>
+      <DashboardInner />
+    </Suspense>
   )
 }

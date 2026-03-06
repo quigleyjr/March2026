@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'February2026 — Emissions Calculator',
+  title: 'March0603 — Emissions Calculator',
   description: 'DESNZ 2024 emissions calculation engine for UK businesses.',
 }
 

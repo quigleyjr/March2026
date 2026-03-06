@@ -57,7 +57,7 @@ export default function HistoryPage() {
       }
 
       localStorage.setItem('reuse_template', JSON.stringify(template))
-      router.push('/dashboard')
+      router.push('/dashboard?reuse=1')
     } catch {
       setReusing(null)
       alert('Failed to load calculation')
@@ -82,7 +82,7 @@ export default function HistoryPage() {
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2L9.5 6H4.5L7 2Z" fill="white"/><path d="M2 9.5C2 7.5 4.5 6 7 6C9.5 6 12 7.5 12 9.5C12 11.5 9.5 12 7 12C4.5 12 2 11.5 2 9.5Z" fill="white" opacity="0.6"/></svg>
           </div>
           <span style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: '1rem', color: 'var(--text)' }}>
-            February<span style={{ color: 'var(--green)' }}>2026</span>
+            March<span style={{ color: 'var(--green)' }}>0603</span>
           </span>
         </div>
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
