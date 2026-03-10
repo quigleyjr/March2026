@@ -16,19 +16,18 @@ const ActivityInputSchema = z.object({
   estimated: z.boolean().optional(),
 })
 
-const IntensitySchema = z.object({
-  employees: z.number().optional(),
-  revenue_m: z.number().optional(),
-  floor_area_m2: z.number().optional(),
-}).optional()
-
 const RequestSchema = z.object({
   organisation_name: z.string().min(1),
   reporting_period_start: z.string(),
   reporting_period_end: z.string(),
   inputs: z.array(ActivityInputSchema).min(1),
-  intensity: IntensitySchema,
+  intensity: z.object({
+    employees: z.number().optional(),
+    revenue_m: z.number().optional(),
+    floor_area_m2: z.number().optional(),
+  }).optional(),
   save: z.boolean().optional().default(true),
+  factor_version_year: z.string().optional(),
 })
 
 export async function POST(req: NextRequest) {
@@ -61,26 +60,27 @@ export async function POST(req: NextRequest) {
       })
 
       if (!calcError) {
-        const lineRows = result.lines.map((l) => ({
-          calculation_id: result.id,
-          input_id: l.input.id,
-          source_type: l.input.source_type,
-          factor_id: l.factor.id,
-          factor_version: l.factor_version,
-          scope: l.scope,
-          category: l.category,
-          quantity: l.input.quantity,
-          unit: l.input.unit,
-          kg_co2e: l.kg_co2e,
-          t_co2e: l.t_co2e,
-          data_quality_tier: l.data_quality_tier,
-          estimated: l.input.estimated ?? false,
-          site: l.input.site ?? null,
-          period_start: l.input.period_start,
-          period_end: l.input.period_end,
-          audit_json: l.audit,
-        }))
-        await supabase.from('emission_lines').insert(lineRows)
+        await supabase.from('emission_lines').insert(
+          result.lines.map(l => ({
+            calculation_id: result.id,
+            input_id: l.input.id,
+            source_type: l.input.source_type,
+            factor_id: l.factor.id,
+            factor_version: l.factor_version,
+            scope: l.scope,
+            category: l.category,
+            quantity: l.input.quantity,
+            unit: l.input.unit,
+            kg_co2e: l.kg_co2e,
+            t_co2e: l.t_co2e,
+            data_quality_tier: l.data_quality_tier,
+            estimated: l.input.estimated ?? false,
+            site: l.input.site ?? null,
+            period_start: l.input.period_start,
+            period_end: l.input.period_end,
+            audit_json: l.audit,
+          }))
+        )
       }
     }
 

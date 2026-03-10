@@ -6,6 +6,7 @@ export type EmissionCategory =
   | 'purchased_electricity'
   | 'fuel_energy_related'
   | 'business_travel'
+  | 'purchased_goods'
 
 export interface EmissionFactor {
   id: string
@@ -84,9 +85,9 @@ export interface SiteBreakdown {
 }
 
 export interface IntensityMetrics {
-  per_employee?: number       // tCO2e per employee
-  per_revenue_m?: number      // tCO2e per £m revenue
-  per_floor_area?: number     // tCO2e per m² floor area
+  per_employee?: number
+  per_revenue_m?: number
+  per_floor_area?: number
   employees?: number
   revenue_m?: number
   floor_area_m2?: number
@@ -115,10 +116,16 @@ export interface CalculationResult {
   metadata: {
     ghg_protocol_consolidation: string
     scope_2_method: string
+    factor_version_provisional?: boolean
   }
 }
 
-// For onboarding / org profile
+export interface BrandOptions {
+  name?: string
+  colour?: string
+  footer?: string
+}
+
 export interface OrgProfile {
   name: string
   companies_house?: string
@@ -127,4 +134,5 @@ export interface OrgProfile {
   revenue_m?: number
   floor_area_m2?: number
   sites: string[]
+  brand?: BrandOptions
 }

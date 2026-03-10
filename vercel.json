@@ -1,8 +1,5 @@
 {
   "framework": "nextjs",
-  "buildCommand": "next build",
-  "devCommand": "next dev",
-  "installCommand": "npm install",
   "functions": {
     "src/app/api/pdf/route.ts": {
       "memory": 1024,

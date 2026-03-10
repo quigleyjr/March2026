@@ -8,7 +8,6 @@
   --white: #ffffff;
   --bg: #f6f8f5;
   --surface: #ffffff;
-  --surface-2: #f0f4ee;
   --border: #e4eae2;
   --border-strong: #c8d8c4;
   --text: #141a12;
@@ -25,7 +24,6 @@
   --red-light: #fdeaea;
   --shadow-sm: 0 1px 3px rgba(20,26,18,0.06), 0 1px 2px rgba(20,26,18,0.04);
   --shadow: 0 4px 12px rgba(20,26,18,0.08), 0 1px 3px rgba(20,26,18,0.05);
-  --shadow-lg: 0 12px 32px rgba(20,26,18,0.1), 0 4px 8px rgba(20,26,18,0.06);
   --radius: 12px;
   --radius-sm: 8px;
   --radius-xs: 5px;
@@ -42,6 +40,4 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-input, select, button, textarea {
-  font-family: inherit;
-}
+input, select, button, textarea { font-family: inherit; }

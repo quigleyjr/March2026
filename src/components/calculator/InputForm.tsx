@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import type { ActivityInput, OrgProfile } from '@/types'
+import { FACTOR_VERSIONS } from '@/lib/factors'
 
 type TemplateInput = {
   factor_id: string
@@ -23,10 +24,13 @@ interface Props {
     reporting_period_start: string
     reporting_period_end: string
     inputs: ActivityInput[]
+    factor_version_year?: string
   }) => void
   loading: boolean
   profile?: OrgProfile | null
   template?: Template
+  factorVersionYear?: string
+  onVersionChange?: (v: string) => void
 }
 
 const SOURCE_OPTIONS = [
@@ -35,9 +39,9 @@ const SOURCE_OPTIONS = [
   { factor_id: 'natural_gas_therms',        label: 'Natural Gas (therms)',           unit: 'therms', scope: 1, group: 'Scope 1 — Stationary' },
   { factor_id: 'petrol_litres',             label: 'Petrol (litres)',                unit: 'litres', scope: 1, group: 'Scope 1 — Vehicles' },
   { factor_id: 'diesel_litres',             label: 'Diesel (litres)',                unit: 'litres', scope: 1, group: 'Scope 1 — Vehicles' },
-  { factor_id: 'petrol_km',                label: 'Petrol Car (km)',                unit: 'km',     scope: 1, group: 'Scope 1 — Vehicles' },
-  { factor_id: 'diesel_km',                label: 'Diesel Car (km)',                unit: 'km',     scope: 1, group: 'Scope 1 — Vehicles' },
-  { factor_id: 'van_diesel_km',            label: 'Diesel Van (km)',                unit: 'km',     scope: 1, group: 'Scope 1 — Vehicles' },
+  { factor_id: 'petrol_km',                 label: 'Petrol Car (km)',                unit: 'km',     scope: 1, group: 'Scope 1 — Vehicles' },
+  { factor_id: 'diesel_km',                 label: 'Diesel Car (km)',                unit: 'km',     scope: 1, group: 'Scope 1 — Vehicles' },
+  { factor_id: 'van_diesel_km',             label: 'Diesel Van (km)',                unit: 'km',     scope: 1, group: 'Scope 1 — Vehicles' },
   { factor_id: 'electricity_kwh',           label: 'Grid Electricity (kWh)',         unit: 'kWh',    scope: 2, group: 'Scope 2 — Electricity' },
   { factor_id: 'flight_domestic',           label: 'Flights — Domestic (km)',        unit: 'km',     scope: 3, group: 'Scope 3 — Business Travel' },
   { factor_id: 'flight_short_haul',         label: 'Flights — Short Haul (km)',      unit: 'km',     scope: 3, group: 'Scope 3 — Business Travel' },
@@ -46,11 +50,22 @@ const SOURCE_OPTIONS = [
   { factor_id: 'rail_national',             label: 'Rail — National UK (km)',        unit: 'km',     scope: 3, group: 'Scope 3 — Business Travel' },
   { factor_id: 'grey_fleet_petrol',         label: 'Grey Fleet — Petrol (km)',       unit: 'km',     scope: 3, group: 'Scope 3 — Business Travel' },
   { factor_id: 'grey_fleet_diesel',         label: 'Grey Fleet — Diesel (km)',       unit: 'km',     scope: 3, group: 'Scope 3 — Business Travel' },
+  { factor_id: 'cat1_food_drink',            label: 'Food & Drink (£ spend)',            unit: 'GBP', scope: 3, group: 'Scope 3 Cat 1 — Purchased Goods & Services' },
+  { factor_id: 'cat1_paper_packaging',       label: 'Paper & Packaging (£ spend)',       unit: 'GBP', scope: 3, group: 'Scope 3 Cat 1 — Purchased Goods & Services' },
+  { factor_id: 'cat1_it_equipment',          label: 'IT Equipment (£ spend)',            unit: 'GBP', scope: 3, group: 'Scope 3 Cat 1 — Purchased Goods & Services' },
+  { factor_id: 'cat1_machinery',             label: 'Machinery & Equipment (£ spend)',   unit: 'GBP', scope: 3, group: 'Scope 3 Cat 1 — Purchased Goods & Services' },
+  { factor_id: 'cat1_chemicals',             label: 'Chemicals (£ spend)',               unit: 'GBP', scope: 3, group: 'Scope 3 Cat 1 — Purchased Goods & Services' },
+  { factor_id: 'cat1_construction_materials',label: 'Construction Materials (£ spend)',  unit: 'GBP', scope: 3, group: 'Scope 3 Cat 1 — Purchased Goods & Services' },
+  { factor_id: 'cat1_textiles',              label: 'Textiles & Clothing (£ spend)',     unit: 'GBP', scope: 3, group: 'Scope 3 Cat 1 — Purchased Goods & Services' },
+  { factor_id: 'cat1_professional_services', label: 'Professional Services (£ spend)',   unit: 'GBP', scope: 3, group: 'Scope 3 Cat 1 — Purchased Goods & Services' },
+  { factor_id: 'cat1_cleaning_services',     label: 'Cleaning & Facilities (£ spend)',   unit: 'GBP', scope: 3, group: 'Scope 3 Cat 1 — Purchased Goods & Services' },
+  { factor_id: 'cat1_catering',              label: 'Catering (£ spend)',                unit: 'GBP', scope: 3, group: 'Scope 3 Cat 1 — Purchased Goods & Services' },
+  { factor_id: 'cat1_average_spend',         label: 'Average — All Sectors (£ spend)',   unit: 'GBP', scope: 3, group: 'Scope 3 Cat 1 — Purchased Goods & Services' },
 ]
 
 const SCOPE_STYLE: Record<number, { bg: string; color: string }> = {
   1: { bg: 'var(--green-light)', color: 'var(--green)' },
-  2: { bg: 'var(--blue-light)',  color: 'var(--blue)' },
+  2: { bg: 'var(--blue-light)',  color: 'var(--blue)'  },
   3: { bg: 'var(--amber-light)', color: 'var(--amber)' },
 }
 
@@ -72,18 +87,17 @@ function rowFromTemplate(inp: TemplateInput, i: number): Row {
   return { _key: `r_t${i}_${Date.now()}`, factor_id: inp.factor_id, source_type: inp.source_type, quantity: inp.quantity, unit: inp.unit, site: inp.site || '', estimated: inp.estimated ?? false }
 }
 
-export function InputForm({ onCalculate, loading, profile, template }: Props) {
-  const [orgName, setOrgName]     = useState(template?.organisation_name || profile?.name || '')
-  const [periodStart, setPeriodStart] = useState('')
-  const [periodEnd,   setPeriodEnd]   = useState('')
-  const [rows, setRows] = useState<Row[]>(
+export function InputForm({ onCalculate, loading, profile, template, factorVersionYear = '2024', onVersionChange }: Props) {
+  const [orgName,      setOrgName]      = useState(template?.organisation_name || profile?.name || '')
+  const [periodStart,  setPeriodStart]  = useState('')
+  const [periodEnd,    setPeriodEnd]    = useState('')
+  const [rows,         setRows]         = useState<Row[]>(
     template?.inputs?.length ? template.inputs.map(rowFromTemplate) : [defaultRow()]
   )
 
-  // Keep org name in sync with profile when no template
   useEffect(() => {
     if (!template && profile?.name) setOrgName(profile.name)
-  }, [profile?.name])
+  }, [profile?.name, template])
 
   const sites = profile?.sites?.filter(Boolean) ?? []
 
@@ -114,6 +128,7 @@ export function InputForm({ onCalculate, loading, profile, template }: Props) {
       organisation_name: orgName,
       reporting_period_start: periodStart,
       reporting_period_end: periodEnd,
+      factor_version_year: factorVersionYear,
       inputs: rows.map((r, i) => ({
         id: `input_${i}`,
         source_type: r.source_type,
@@ -130,16 +145,13 @@ export function InputForm({ onCalculate, loading, profile, template }: Props) {
 
   const isValid = orgName.trim() && periodStart && periodEnd && rows.every(r => r.quantity > 0)
 
-  // styles
-  const card:      React.CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '1.25rem', boxShadow: 'var(--shadow-sm)', marginBottom: '0.75rem' }
-  const lbl:       React.CSSProperties = { display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-2)', marginBottom: '0.35rem' }
-  const inp:       React.CSSProperties = { width: '100%', padding: '0.5rem 0.75rem', fontSize: '0.875rem', border: '1px solid var(--border)', borderRadius: 'var(--radius-xs)', background: 'var(--bg)', color: 'var(--text)', outline: 'none', fontFamily: 'inherit' }
-  const secHead:   React.CSSProperties = { fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '0.875rem' }
+  const card:    React.CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '1.25rem', boxShadow: 'var(--shadow-sm)', marginBottom: '0.75rem' }
+  const lbl:     React.CSSProperties = { display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-2)', marginBottom: '0.35rem' }
+  const inp:     React.CSSProperties = { width: '100%', padding: '0.5rem 0.75rem', fontSize: '0.875rem', border: '1px solid var(--border)', borderRadius: 'var(--radius-xs)', background: 'var(--bg)', color: 'var(--text)', outline: 'none', fontFamily: 'inherit' }
+  const secHead: React.CSSProperties = { fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '0.875rem' }
 
   return (
     <form onSubmit={handleSubmit}>
-
-      {/* Organisation */}
       <div style={card}>
         <p style={secHead}>Organisation</p>
         <div style={{ marginBottom: '0.75rem' }}>
@@ -156,9 +168,24 @@ export function InputForm({ onCalculate, loading, profile, template }: Props) {
             <input style={inp} type="date" required value={periodEnd} onChange={e => setPeriodEnd(e.target.value)} />
           </div>
         </div>
+
+        <div style={{ marginTop: '0.75rem' }}>
+          <label style={lbl}>Emission factors version</label>
+          <select style={{ ...inp, background: 'var(--surface)' }}
+            value={factorVersionYear}
+            onChange={e => onVersionChange?.(e.target.value)}>
+            {FACTOR_VERSIONS.map(v => (
+              <option key={v.value} value={v.value}>{v.label}</option>
+            ))}
+          </select>
+          {factorVersionYear === '2025' && (
+            <div style={{ marginTop: '0.4rem', padding: '0.4rem 0.6rem', background: 'var(--amber-light)', borderRadius: 'var(--radius-xs)', fontSize: '0.72rem', color: 'var(--amber)', fontWeight: 600 }}>
+              ⚠ DESNZ 2025 factors are provisional. Official values due June 2026. Do not use for final statutory disclosure.
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Activity rows */}
       <div style={card}>
         <p style={secHead}>
           Activity Data
@@ -177,8 +204,6 @@ export function InputForm({ onCalculate, loading, profile, template }: Props) {
             return (
               <div key={row._key} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '0.75rem' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: cols, gap: '0.5rem', alignItems: 'end' }}>
-
-                  {/* Source select */}
                   <div>
                     <label style={{ ...lbl, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                       Source
@@ -193,7 +218,6 @@ export function InputForm({ onCalculate, loading, profile, template }: Props) {
                     </select>
                   </div>
 
-                  {/* Site select */}
                   {sites.length > 0 && (
                     <div>
                       <label style={lbl}>Site</label>
@@ -204,7 +228,6 @@ export function InputForm({ onCalculate, loading, profile, template }: Props) {
                     </div>
                   )}
 
-                  {/* Quantity */}
                   <div>
                     <label style={lbl}>{row.unit}</label>
                     <input style={{ ...inp, background: 'var(--surface)' }} type="number" min="0" step="any" required
@@ -213,7 +236,6 @@ export function InputForm({ onCalculate, loading, profile, template }: Props) {
                       placeholder="0" />
                   </div>
 
-                  {/* Est + remove */}
                   <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.4rem', paddingBottom: '1px' }}>
                     <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.2rem', cursor: 'pointer' }}>
                       <span style={{ fontSize: '0.62rem', color: 'var(--text-3)', fontWeight: 600 }}>Est</span>
@@ -236,7 +258,6 @@ export function InputForm({ onCalculate, loading, profile, template }: Props) {
         </button>
       </div>
 
-      {/* Submit */}
       <button type="submit" disabled={!isValid || loading}
         style={{ width: '100%', padding: '0.75rem', fontSize: '0.875rem', fontWeight: 700, background: isValid && !loading ? 'var(--green)' : 'var(--border-strong)', color: isValid && !loading ? 'white' : 'var(--text-3)', border: 'none', borderRadius: 'var(--radius-sm)', cursor: isValid && !loading ? 'pointer' : 'not-allowed', boxShadow: isValid && !loading ? '0 2px 8px rgba(26,122,60,0.25)' : 'none', transition: 'all 0.15s' }}>
         {loading ? 'Calculating…' : 'Calculate emissions →'}

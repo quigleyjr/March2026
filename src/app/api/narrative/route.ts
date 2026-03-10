@@ -26,7 +26,7 @@ Emissions Data:
 - Total emissions: ${result.summary.total_t_co2e} tCO2e
 - Scope 1 (direct): ${result.summary.scope_1_t_co2e} tCO2e
 - Scope 2 (electricity, location-based): ${result.summary.scope_2_t_co2e} tCO2e
-- Scope 3 (well-to-tank upstream): ${result.summary.scope_3_t_co2e} tCO2e
+- Scope 3 (well-to-tank + business travel): ${result.summary.scope_3_t_co2e} tCO2e
 - Data quality score: ${result.summary.data_quality_score}/100
 - Estimated lines: ${result.summary.estimated_lines}
 - Conversion factors: DESNZ UK Government GHG Conversion Factors ${result.factor_version}
@@ -41,7 +41,6 @@ Write the SECR narrative now:`
     })
 
     const narrative = message.content[0].type === 'text' ? message.content[0].text : ''
-
     return NextResponse.json({ narrative })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Failed to generate narrative'

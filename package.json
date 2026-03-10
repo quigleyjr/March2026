@@ -9,19 +9,16 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.24.0",
+    "@sparticuz/chromium": "^123.0.0",
     "@supabase/supabase-js": "^2.43.0",
-    "@supabase/ssr": "^0.3.0",
+    "clsx": "^2.1.1",
     "next": "14.2.3",
+    "puppeteer-core": "^22.0.0",
     "react": "^18",
     "react-dom": "^18",
-    "zod": "^3.23.8",
     "recharts": "^2.12.7",
-    "lucide-react": "^0.379.0",
-    "clsx": "^2.1.1",
-    "tailwind-merge": "^2.3.0",
-    "@anthropic-ai/sdk": "^0.24.0",
-    "puppeteer-core": "^22.0.0",
-    "@sparticuz/chromium": "^123.0.0"
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/node": "^20",
