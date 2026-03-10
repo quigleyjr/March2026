@@ -5,63 +5,26 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 
 import type { CalculationResult, OrgProfile } from '@/types'
 
 
-// Parses **Bold Label** + paragraph structure from the AI narrative
 function NarrativeDisplay({ text }: { text: string }) {
-  // Split into blocks — each **Label** starts a new section
-  const blocks = text.split(/(?=\*\*[^*]+\*\*)/).filter(Boolean)
-
-  if (blocks.length <= 1) {
-    // Fallback: plain text (no structure detected)
-    return (
-      <div style={{ fontSize: '0.875rem', lineHeight: 1.8, color: 'var(--text)' }}>
-        {text.split('\n\n').map((para, i) => (
-          <p key={i} style={{ marginBottom: i < text.split('\n\n').length - 1 ? '1rem' : 0 }}>{para}</p>
-        ))}
-      </div>
-    )
-  }
-
-  const sections = blocks.map(block => {
-    const labelMatch = block.match(/^\*\*([^*]+)\*\*\n?/)
-    if (labelMatch) {
-      return {
-        label: labelMatch[1].trim(),
-        body: block.slice(labelMatch[0].length).trim(),
-      }
-    }
-    return { label: null, body: block.trim() }
-  }).filter(s => s.body)
-
-  const sectionColours: Record<string, string> = {
-    'Greenhouse Gas Emissions': 'var(--green)',
-    'Scope 3 Emissions':        'var(--amber)',
-    'Methodology':              'var(--blue)',
-    'Data Quality & Assurance': 'var(--text-3)',
-  }
-
+  const clean = text
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/^#{1,3}\s+/gm, '')
+    .replace(/^-\s+/gm, '')
+    .trim()
+  const paragraphs = clean.split(/\n{2,}/).map(p => p.replace(/\n/g, ' ').trim()).filter(Boolean)
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
-      {sections.map((s, i) => (
-        <div key={i} style={{ display: 'flex', gap: '0.875rem', alignItems: 'flex-start' }}>
-          {/* Left colour bar */}
-          <div style={{ width: 3, borderRadius: 2, flexShrink: 0, alignSelf: 'stretch', background: s.label ? (sectionColours[s.label] ?? 'var(--border-strong)') : 'var(--border)' }} />
-          <div style={{ flex: 1 }}>
-            {s.label && (
-              <p style={{
-                fontFamily: 'JetBrains Mono, monospace',
-                fontSize: '0.62rem',
-                fontWeight: 700,
-                letterSpacing: '0.09em',
-                textTransform: 'uppercase',
-                color: sectionColours[s.label] ?? 'var(--text-3)',
-                marginBottom: '0.35rem',
-              }}>
-                {s.label}
-              </p>
-            )}
-            <p style={{ fontSize: '0.875rem', lineHeight: 1.8, color: 'var(--text)' }}>{s.body}</p>
-          </div>
-        </div>
+    <div>
+      {paragraphs.map((para, i) => (
+        <p key={i} style={{
+          fontSize: '0.925rem',
+          lineHeight: 2,
+          color: '#1a2218',
+          fontWeight: 400,
+          margin: i < paragraphs.length - 1 ? '0 0 1.1em 0' : '0',
+          textIndent: i === 0 ? 0 : '1.5em',
+        }}>
+          {para}
+        </p>
       ))}
     </div>
   )
@@ -269,18 +232,52 @@ export function ResultsPanel({ result, profile }: { result: CalculationResult; p
       </div>
 
       {/* SECR narrative */}
-      <div style={card}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.875rem' }}>
-          <p style={sHead}>SECR Narrative</p>
-          <button onClick={generateNarrative} disabled={narrativeLoading} style={{ ...mono, fontSize: '0.68rem', fontWeight: 600, color: 'var(--green)', background: 'var(--green-light)', border: '1px solid var(--border-strong)', padding: '0.3rem 0.75rem', borderRadius: 'var(--radius-xs)', cursor: narrativeLoading ? 'wait' : 'pointer' }}>
-            {narrativeLoading ? 'Generating...' : narrative ? 'Regenerate' : 'Generate with AI'}
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', boxShadow: 'var(--shadow-sm)', overflow: 'hidden' }}>
+        {/* Document header bar */}
+        <div style={{ padding: '0.875rem 1.5rem', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f9faf8' }}>
+          <div>
+            <p style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: '0.85rem', color: 'var(--text)', letterSpacing: '0.01em', margin: 0 }}>SECR Narrative</p>
+            <p style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.6rem', color: 'var(--text-3)', margin: '2px 0 0 0', letterSpacing: '0.04em' }}>Directors&apos; Report — Energy &amp; Carbon Disclosure</p>
+          </div>
+          <button
+            onClick={generateNarrative}
+            disabled={narrativeLoading}
+            style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.67rem', fontWeight: 600, color: narrativeLoading ? 'var(--text-3)' : 'var(--green)', background: narrativeLoading ? 'var(--bg)' : 'var(--green-light)', border: '1px solid var(--border-strong)', padding: '0.35rem 0.875rem', borderRadius: 'var(--radius-xs)', cursor: narrativeLoading ? 'wait' : 'pointer', transition: 'opacity 0.15s' }}
+          >
+            {narrativeLoading ? '↻  Writing…' : narrative ? '↻  Regenerate' : '✦  Generate with AI'}
           </button>
         </div>
-        {narrativeError && <p style={{ ...mono, fontSize: '0.72rem', color: 'var(--red)', marginBottom: '0.5rem' }}>{narrativeError}</p>}
-        {narrative ? (
-          <NarrativeDisplay text={narrative} />
-        ) : (
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-3)' }}>Generate an AI-written SECR narrative paragraph ready for your annual report or Directors&apos; Report.</p>
+
+        {/* Document body */}
+        <div style={{ padding: '2rem 2.25rem 2rem' }}>
+          {narrativeError && (
+            <p style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.72rem', color: 'var(--red)', marginBottom: '1rem' }}>{narrativeError}</p>
+          )}
+          {narrative ? (
+            <NarrativeDisplay text={narrative} />
+          ) : (
+            <div style={{ textAlign: 'center', padding: '2rem 1rem' }}>
+              <p style={{ fontSize: '1.75rem', marginBottom: '0.5rem' }}>✦</p>
+              <p style={{ fontSize: '0.875rem', color: 'var(--text-3)', lineHeight: 1.6 }}>
+                Generate a statutory SECR narrative ready to paste into your<br />Directors&apos; Report or annual report filing.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Document footer */}
+        {narrative && (
+          <div style={{ padding: '0.75rem 1.5rem', borderTop: '1px solid var(--border)', background: '#f9faf8', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.6rem', color: 'var(--text-3)' }}>
+              DESNZ GHG Conversion Factors {result.factor_version} · GHG Protocol · Operational Control
+            </span>
+            <button
+              onClick={async () => { await navigator.clipboard.writeText(narrative) }}
+              style={{ marginLeft: 'auto', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.6rem', color: 'var(--text-3)', background: 'none', border: '1px solid var(--border)', padding: '0.2rem 0.6rem', borderRadius: 'var(--radius-xs)', cursor: 'pointer' }}
+            >
+              Copy text
+            </button>
+          </div>
         )}
       </div>
 

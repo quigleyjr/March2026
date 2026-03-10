@@ -12,32 +12,17 @@ interface BrandOptions {
 
 function renderNarrativeHtml(text: string): string {
   if (!text) return ''
-  const blocks = text.split(/(?=\*\*[^*]+\*\*)/).filter(Boolean)
-  if (blocks.length <= 1) {
-    // Plain text fallback
-    return text.split('\n\n').map(p => `<p style="margin:0 0 10px 0">${p}</p>`).join('')
-  }
-  const colours: Record<string, string> = {
-    'Greenhouse Gas Emissions': '#1a7a3c',
-    'Scope 3 Emissions':        '#b87a00',
-    'Methodology':              '#1a4d8c',
-    'Data Quality & Assurance': '#6a8267',
-  }
-  return blocks.map(block => {
-    const m = block.match(/^\*\*([^*]+)\*\*\n?/)
-    if (!m) return `<p style="margin:0 0 10px 0">${block.trim()}</p>`
-    const label = m[1].trim()
-    const body  = block.slice(m[0].length).trim()
-    const colour = colours[label] ?? '#4a5e46'
-    return `<div style="display:flex;gap:10px;margin-bottom:14px">
-      <div style="width:3px;background:${colour};border-radius:2px;flex-shrink:0"></div>
-      <div>
-        <p style="font-size:9px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:${colour};margin:0 0 4px 0">${label}</p>
-        <p style="margin:0;line-height:1.75">${body}</p>
-      </div>
-    </div>`
-  }).join('')
+  const clean = text
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/^#{1,3}\s+/gm, '')
+    .replace(/^-\s+/gm, '')
+    .trim()
+  const paragraphs = clean.split(/\n{2,}/).map(p => p.replace(/\n/g, ' ').trim()).filter(Boolean)
+  return paragraphs.map((p, i) =>
+    `<p style="margin:0 0 ${i < paragraphs.length - 1 ? '14' : '0'}px 0; text-indent:${i === 0 ? '0' : '1.5em'}; line-height:1.9; color:#1a2218; font-size:11px; text-align:justify; hyphens:auto;">${p}</p>`
+  ).join('')
 }
+
 
 function buildHtml(result: CalculationResult, narrative: string, brand: BrandOptions = {}): string {
   const { summary, lines, intensity } = result
